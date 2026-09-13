@@ -176,7 +176,29 @@ def create_app(supervisor=None):
         wallet = secret("WALLET_PRIVATE_KEY")
         if len(password) < 32 or not wallet:
             raise RuntimeError("Node password and wallet secret files are required")
+        (directory / "storage").mkdir(parents=True, exist_ok=True, mode=0o700)
         env = dict(os.environ)
+        # Published v7 network defaults; explicit deployment values take precedence.
+        networks = {
+            "8453": (
+                "https://base.blockscout.com/api",
+                "0x6aBE1d282f72B474E54527D93b979A4f64d3030a",
+                "0x7431aDa8a591C955a994a21710752EF9b882b8e3",
+            ),
+            "84532": (
+                "https://base-sepolia.blockscout.com/api",
+                "0xA328196f2438DADA5ab729E39388D86896c27c85",
+                "0x5C80Ddd187054E1E4aBBfFCD750498e81d34FfA3",
+            ),
+        }
+        chain = env.get("ETH_NODE_CHAIN_ID", "8453")
+        if chain not in networks:
+            raise RuntimeError("Supported node networks are Base and Base Sepolia")
+        for name, value in zip(
+            ("BLOCKSCOUT_API_URL", "DIAMOND_CONTRACT_ADDRESS", "MOR_TOKEN_ADDRESS"), networks[chain]
+        ):
+            if not env.get(name):
+                env[name] = value
         env.update(
             WALLET_PRIVATE_KEY=wallet,
             COOKIE_CONTENT="admin:" + password,

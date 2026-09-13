@@ -178,19 +178,31 @@ class Node:
         raise GatewayError("catalog_limit", "Catalog exceeds the pagination limit")
 
     async def model(self, model_id):
-        data = object_response((await self.request("GET", f"/blockchain/models/{model_id}")).get("model"))
-        if (
-            str(data.get("Id", "")).lower() != model_id.lower()
-            or data.get("IsDeleted")
-            or data.get("ModelType") != "LLM"
-        ):
-            raise GatewayError(
-                "unsupported_model",
-                "This model does not support chat completions",
-                400,
-                outcome="not_submitted",
+        # v7.11 exposes a paginated model catalog, not GET /models/:id.
+        for offset in range(0, 10000, 100):
+            data = await self.request(
+                "GET", "/blockchain/models", params={"offset": offset, "limit": 100, "order": "desc"}
             )
-        return data
+            batch = data.get("models")
+            if not isinstance(batch, list):
+                raise GatewayError("node_protocol", "Node catalog is invalid", 502)
+            for model in batch:
+                object_response(model)
+                if str(model.get("Id", "")).lower() != model_id.lower():
+                    continue
+                if model.get("IsDeleted") or model.get("ModelType") != "LLM":
+                    raise GatewayError(
+                        "unsupported_model",
+                        "This model does not support chat completions",
+                        400,
+                        outcome="not_submitted",
+                    )
+                return model
+            if len(batch) < 100:
+                raise GatewayError(
+                    "model_not_found", "Model is absent from the node catalog", 404, outcome="not_submitted"
+                )
+        raise GatewayError("catalog_limit", "Model lookup exceeds the catalog pagination limit")
 
     async def bids(self, model_id):
         data = (await self.request("GET", f"/blockchain/models/{model_id}/bids/rated")).get("bids")

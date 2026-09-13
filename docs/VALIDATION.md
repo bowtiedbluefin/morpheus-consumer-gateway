@@ -1,12 +1,12 @@
 # Validation record
 
-Recovery update v0.2 verified September 13, 2026. No consumer wallet secret was used, no real provider inference was requested, and no blockchain transactions were submitted during this build.
+Recovery update v0.2 verified September 13, 2026. The automated checks below use simulated wallets/providers. A separately authorized live opening and inference test also passed; see the live-test record below.
 
 ## Completed locally
 
 | Check | Result and evidence |
 | --- | --- |
-| Python backend tests | 58 passing tests in `tests/`; FastAPI/SQLite behavior with a simulated node and an HTTPX transport contract fixture |
+| Python backend tests | 61 passing tests in `tests/`; FastAPI/SQLite behavior with a simulated node and an HTTPX transport contract fixture |
 | Real subprocess supervision | Supervisor test starts real child processes, confirms a different PID after restart, confirms old processes exit, and restores the previous config after a deliberately broken child startup. Its readiness hook is simulated; it is not a real-node readiness test. |
 | Browser acceptance | Six Playwright Chromium cases: four audit regressions (save race, expired login, restart intent, stalled refresh), wallet recovery controls, and sign in, choose catalog model, edit duration/retention, save policy, create an API key, send JSON and SSE chat requests, observe session reuse, block provider, reject subsequent inference, apply rating/restart, inspect success, desktop/mobile layouts without page errors |
 | Frontend | TypeScript check and Vite production build pass; Prettier passes |
@@ -19,6 +19,14 @@ Backend coverage includes authentication and CSRF, actual request byte limits, p
 Recovery coverage includes contract-held versus available MOR, withdrawal thresholds/gas/backoff, unknown withdrawal deduplication, journal-confirmed outcomes, failed receipts, uncertain opening recovery, scans beyond 100 wallet sessions, opt-in live-orphan cleanup, pending-close idempotence, stake budgets, healthy-model maintenance isolation, hot reuse during wallet work, stale reconciliation races, provider cooldown, invalid prompts, POST idempotency, credential rotation and pool-cap reduction.
 
 The checked-in dashboard image was captured from the automated browser flow and is visibly labeled **DEMO**. Its balances, provider, and response are simulated.
+
+## Authorized local live test — September 13, 2026
+
+Started the bundled node and gateway against Base mainnet using operator-provided, locally ignored credentials. Verified live wallet/network identity and rated bids for `deepseek-v4-flash`. Opened one 1,800-second session through the gateway with a 10 MOR per-session ceiling. Two providers failed before submission; the third opened successfully. Actual escrow was approximately 2.678757 MOR. Approval and opening receipts both had status 1. A model-scoped application key sent a small prompt through `/v1/chat/completions`; HTTP 200 returned the requested text, using the same session.
+
+The test exposed and fixed missing explorer/network defaults, a missing native storage directory, and a nonexistent single-model lookup route. The adapter now uses the native paginated catalog. Regression tests cover packaged startup defaults for both supported networks and the actual model lookup route.
+
+Private credentials and detailed session evidence remain in ignored local `secrets/` and `data/` files. This test does not validate expiry closure, day-lock maturity, withdrawal, crash recovery, load or backup restoration. Those cases remain below.
 
 ## Still required: live acceptance
 

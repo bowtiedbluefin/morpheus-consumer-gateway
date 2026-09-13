@@ -72,3 +72,35 @@ async def test_helper_restart_idempotency_and_journal_read(tmp_path):
         atomic_write(journal / ("b" * 32 + ".json"), b'{"stage":"not_submitted","completed":true}')
         assert (await client.get("/journal/" + "b" * 32)).json()["completed"]
         assert (await client.get("/journal/invalid")).status_code == 400
+
+
+@pytest.mark.parametrize("chain", ["8453", "84532"])
+def test_packaged_node_has_network_defaults_and_existing_storage(tmp_path, monkeypatch, chain):
+    from node_helper import app as helper_module
+
+    captured = {}
+    original = helper_module.Supervisor
+
+    def capture(directory, command, environment, **kwargs):
+        captured.update(environment)
+        return original(directory, command, environment, **kwargs)
+
+    monkeypatch.setattr(helper_module, "Supervisor", capture)
+    monkeypatch.setenv("NODE_DATA_DIR", str(tmp_path))
+    monkeypatch.setenv("NODE_PASSWORD", "test-password-" + "x" * 40)
+    monkeypatch.setenv("WALLET_PRIVATE_KEY", "1" * 64)
+    monkeypatch.setenv("ETH_NODE_CHAIN_ID", chain)
+    for name in (
+        "NODE_PASSWORD_FILE",
+        "WALLET_PRIVATE_KEY_FILE",
+        "BLOCKSCOUT_API_URL",
+        "DIAMOND_CONTRACT_ADDRESS",
+        "MOR_TOKEN_ADDRESS",
+    ):
+        monkeypatch.delenv(name, raising=False)
+    helper_module.create_app()
+    assert (tmp_path / "storage").is_dir()
+    assert captured["BLOCKSCOUT_API_URL"].endswith("/api")
+    assert ("sepolia" in captured["BLOCKSCOUT_API_URL"]) == (chain == "84532")
+    assert len(captured["DIAMOND_CONTRACT_ADDRESS"]) == 42
+    assert len(captured["MOR_TOKEN_ADDRESS"]) == 42
