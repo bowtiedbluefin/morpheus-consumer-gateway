@@ -15,4 +15,4 @@ COPY --from=web /web/dist ./web/dist
 RUN mkdir -p /data /control && chown -R 10001:10001 /data /control
 USER 10001:10001
 EXPOSE 8000
-CMD ["uvicorn", "gateway.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log"]
+CMD ["uvicorn", "gateway.app:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--limit-concurrency", "128", "--timeout-keep-alive", "5"]

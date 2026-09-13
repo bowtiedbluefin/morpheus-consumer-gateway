@@ -97,6 +97,7 @@ async def test_denied_provider_not_reused(env):
     assert (await c.post("/v1/chat/completions", json=BODY, headers=headers)).status_code == 503
     assert len(node.completions) == 1
     await app.state.sessions.tick()
+    await asyncio.gather(*app.state.sessions.tasks)
     assert node.closes == 1
 
 
@@ -237,6 +238,7 @@ async def test_idle_and_until_expiry_retention(env):
     p.models[0].retention = "on_demand"
     app.state.store.put("settings", "policy", p.model_dump())
     await app.state.sessions.tick()
+    await asyncio.gather(*app.state.sessions.tasks)
     assert node.closes == 1
 
 
@@ -246,10 +248,14 @@ async def test_maintain_warms_then_replaces_near_expiry(env):
     p.models[0].retention = "maintain"
     app.state.store.put("settings", "policy", p.model_dump())
     await app.state.sessions.tick()
+    await asyncio.gather(*app.state.sessions.tasks)
     assert node.opens == 1 and not app.state.sessions.active
     sid = next(iter(node.sessions))
     node.sessions[sid]["EndsAt"] = int(time.time()) + 10
     await app.state.sessions.tick()
+    await asyncio.gather(*app.state.sessions.tasks)
+    await app.state.sessions.tick()
+    await asyncio.gather(*app.state.sessions.tasks)
     assert node.opens == 2 and node.closes == 1
 
 
@@ -305,10 +311,12 @@ async def test_provider_decline_tries_another_provider_before_chain_submission(e
 
         return [{"Bid": await bid(id), "Score": score} for id, score in ((first_id, 20), (BID, 10))]
 
-    async def open_session(id, duration):
+    async def open_session(id, duration, **kwargs):
         attempts.append(id)
         if id == first_id:
-            raise GatewayError("provider_declined", "Provider declined before submission")
+            raise GatewayError(
+                "provider_declined", "Provider declined before submission", outcome="not_submitted"
+            )
         return await original_open(id, duration)
 
     node.bid, node.bids, node.open = bid, bids, open_session
@@ -336,17 +344,18 @@ async def test_blocking_provider_during_reuse_lookup_prevents_dispatch(env):
     assert len(node.completions) == 1 and not app.state.sessions.active
 
 
-async def test_cancelled_open_is_uncertain_and_blocks_duplicate(env):
+async def test_cancelled_caller_does_not_cancel_or_duplicate_native_open(env):
     app, _, node, *_ = env
-    node.open_delay = 10
+    node.open_delay = 0.1
     task = asyncio.create_task(app.state.sessions.acquire(MODEL))
     await node.open_started.wait()
     task.cancel()
     with pytest.raises(asyncio.CancelledError):
         await task
-    assert app.state.store.all("session")[0]["state"] == "open_unknown"
-    with pytest.raises(GatewayError, match="reconciliation"):
-        await app.state.sessions.acquire(MODEL)
+    await asyncio.gather(*app.state.sessions.tasks)
+    row = await app.state.sessions.acquire(MODEL)
+    assert row["state"] == "open"
+    app.state.sessions.release(row)
     assert node.opens == 1 and not app.state.sessions.lock.locked()
 
 

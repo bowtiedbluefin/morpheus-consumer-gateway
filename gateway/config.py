@@ -24,6 +24,14 @@ class Config:
     drain_timeout: float = 150
     tick_seconds: float = 10
     demo: bool = False
+    control_timeout: float = 8
+    acquisition_timeout: float = 240
+    body_timeout: float = 15
+    response_bytes: int = 16 * 1024 * 1024
+    max_connections: int = 128
+    rpc_url: str = ""
+    require_guards: bool = True
+    recovery_interval: float = 60
 
     @classmethod
     def from_env(cls):
@@ -40,4 +48,11 @@ class Config:
             public_origin=os.getenv("PUBLIC_ORIGIN", "http://localhost:8000").rstrip("/"),
             secure_cookie=os.getenv("COOKIE_SECURE", "true").lower() == "true",
             static_dir=Path(os.getenv("STATIC_DIR", "web/dist")),
+            control_timeout=float(os.getenv("CONTROL_TIMEOUT", "8")),
+            request_timeout=float(os.getenv("REQUEST_TIMEOUT", "120")),
+            open_timeout=float(os.getenv("OPEN_TIMEOUT", "180")),
+            acquisition_timeout=float(os.getenv("ACQUISITION_TIMEOUT", "240")),
+            drain_timeout=float(os.getenv("DRAIN_TIMEOUT", "150")),
+            rpc_url=secret("RPC_URL"),
+            require_guards=os.getenv("REQUIRE_NODE_GUARDS", "true").lower() == "true",
         )

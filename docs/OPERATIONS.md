@@ -6,15 +6,15 @@ Compose maintains `gateway-data` (SQLite and process lock), `node-data` (native 
 
 The gateway itself does not receive the wallet private-key file. The node helper loads the wallet into its node process environment, as required by the upstream node. The gateway has the native node admin password and therefore must remain a trusted component. Anyone who can control the VM or container runtime can access these secrets.
 
-Do not run Electron, another gateway, or other wallet-writing automation against this same dedicated wallet/node during normal operation. The gateway coordinates its own requests, not all possible users of a private key or the node's native expiry worker.
+Do not run Electron, another gateway, or other wallet-writing automation against this same dedicated wallet/node during normal operation. The gateway coordinates its own requests, not all possible users of a private key or another machine using that wallet.
 
 ## Settings and restart semantics
 
 Saving provider restrictions changes gateway eligibility immediately. In-flight inference is allowed to finish. Eligible selection is checked again after slow acquisition, immediately before dispatch. Rating weights and the node's own allow/deny filters change only after **Apply rating and restart** succeeds.
 
-The pending indicator compares saved rating settings with the last successful apply recorded by the gateway. It does not detect arbitrary manual edits to the node's file. Treat this dashboard as the owner of that file; do not concurrently edit it by hand. The helper removes inherited legacy allowlist and inline rating environment values to avoid precedence surprises.
+The pending indicator compares saved rating settings with the rating file reported by the local helper. Treat this dashboard as the owner of that file; do not concurrently edit it by hand. The helper removes inherited legacy allowlist and inline rating environment values to avoid precedence surprises.
 
-A restart closes admission, drains active work for up to 150 seconds, then waits for any current lifecycle operation before restarting the process. A normal drain timeout reports failure without stopping the node. Immediate restart skips the active-request drain but still waits for the lifecycle lock. It may terminate streams. The helper allows up to 90 seconds for native `/config` readiness; the gateway then checks identity and sessions. A failed operation never shows as successfully applied.
+A restart closes admission, drains active work for up to 150 seconds, including waiting for the current lifecycle operation before restarting the process. A normal drain timeout reports failure without stopping the node. Immediate restart skips the active-request drain but still waits for the lifecycle lock. It may terminate streams. The helper allows up to 90 seconds for native configuration and chain-balance readiness; the gateway checks identity, balances and sessions. A failed operation never shows as successfully applied.
 
 If the node exits unexpectedly, the helper attempts to restart it every five seconds. This process-monitor restart is different from an operator-requested graceful drain; requests can fail during a crash. The dashboard remains served by its separate container.
 
@@ -26,12 +26,12 @@ If the node exits unexpectedly, the helper attempts to restart it every five sec
 | `no_eligible_provider` | Current rated bids and your access policy produce no candidate. Check the provider addresses and apply pending native rating changes. A catalog entry is not a capacity guarantee. |
 | `open_unknown` with a known chain ID | The gateway records an opening but could not verify its result. Background reconciliation reads the node until its state is known. |
 | `open_unknown` without an ID | A submitted operation may have succeeded even though the response was lost. Inspect wallet sessions and chain history; bind the correct ID in the Sessions screen. Wallet, model, provider, bid, ID, and opening time are verified before adoption. |
-| `close_pending` | A close response or confirmation was uncertain. Background reads can confirm closure. Do not repeatedly click close until you have checked the prior transaction outcome. |
+| `close_pending` | A close response or confirmation was uncertain. Background reads can confirm closure. Repeated close requests are idempotent while confirmation is pending. |
 | `node_identity_changed` | The node now uses another wallet or network. Restore the intended node environment. Do not delete the database just to silence this check. |
 | `unsupported_node` | This release requires v7.11.0. Restore the pinned version or validate/update the adapter. |
 | `stream_interrupted` | The provider stream failed or sent malformed/control data. The gateway emits a structured SSE error and does not replay the prompt. |
 
-There is deliberately no “forget uncertain open” button. If no matching session appears, the current UI cannot prove that the transaction never happened. Reconcile it against complete on-chain transaction history before engineering an administrative state correction. Closing, rather than a nonexistent recovery RPC, is the upstream mechanism for releasing a session's unused stake. Claiming matured, day-locked stake is a separate native operation and is not implemented by this dashboard.
+There is deliberately no “forget uncertain open” button. If no matching session appears, the current UI cannot prove that the transaction never happened. Reconcile it against complete on-chain transaction history before engineering an administrative state correction. Closing, rather than a nonexistent recovery RPC, is the upstream mechanism for releasing a session's unused stake. The Wallet & recovery page configures automatic matured-stake withdrawal and exposes a manual check. Only the contract-reported available portion can be withdrawn. See [recovery rules](RECOVERY-AND-AUDIT-FIXES.md).
 
 ## Backups
 
@@ -43,7 +43,7 @@ Restoring local files does not roll back blockchain state. Start the node and ga
 
 Revoke application keys in the browser; keys are returned once at creation and only hashes are stored. Existing admitted requests can finish. Dashboard sessions expire after 12 hours and can be logged out.
 
-Admin-token rotation requires replacing its host secret and recreating the gateway; existing browser sessions remain valid until logout/expiry. Emergency global browser-session invalidation currently requires an operator database change while the gateway is stopped; automatic token-bound session invalidation is future work.
+Admin-token rotation requires replacing its host secret and recreating the gateway; existing browser sessions are invalidated by the changed secret. The authenticated `/admin/api/logout-all` endpoint increments the session generation to revoke all browser sessions.
 
 Native node-password rotation is not a simple environment change: the upstream node seeds `.cookie` on first start and then reuses it. Coordinate changes to the persisted cookie/auth configuration and both services while stopped. Do not overwrite the wallet secret or switch chains on an existing installation without handling its live sessions and recorded identity first.
 
@@ -52,3 +52,9 @@ Native node-password rotation is not a simple environment change: the upstream n
 The gateway event log stores event types, IDs, model/provider identifiers and timing; it does not store prompt or response text. Uvicorn access logging is disabled in the packaged commands. The node is configured with chat-context storage/forwarding off and reduced log levels. Independent providers still process prompts, and native logging behavior should be verified in live acceptance. This is not a promise of end-to-end prompt confidentiality or TEE coverage beyond the selected node/provider behavior.
 
 Do not expose port 8082 or the helper socket publicly. Application keys authorize inference, not administration. The dashboard uses an HttpOnly session cookie, strict same-site policy, a CSRF token and exact-origin checks. Put the public endpoint behind HTTPS and any network access controls appropriate to your own deployment.
+
+## Recovery journals and upgrades
+
+Rebuild both containers for v0.2; the stock node lacks required recovery and stake-limit capabilities. Keep `gateway-data` and `node-data` together: native intent/transaction journals live under `node-data/gateway-journal`, and helper restart outcomes under `node-data/operation-*.json`. Do not delete them to clear uncertain states. Recovery reads receipts using the same RPC URL configured for the node. Journal files are retained for recovery; monitor volume usage. Terminal gateway history is retained for 30 days, activity for 500 events, and container logs are rotated.
+
+Automatic withdrawal waits when another wallet transaction is unresolved, available MOR is below the configured threshold, or gas funds are insufficient. A paused inference gateway still performs cleanup. Disabling automatic recovery disables wallet scanning and automatic withdrawals; managed-session lifecycle cleanup continues.

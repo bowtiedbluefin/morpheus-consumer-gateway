@@ -19,8 +19,8 @@ jobs:
       - run: python -m venv .venv
       - run: .venv/bin/pip install -r requirements-dev.lock
       - run: .venv/bin/pip install --no-deps -e .
-      - run: .venv/bin/ruff check gateway node_helper devtools tests scripts
-      - run: .venv/bin/ruff format --check gateway node_helper devtools tests scripts
+      - run: .venv/bin/ruff check gateway node_helper devtools tests scripts deploy
+      - run: .venv/bin/ruff format --check gateway node_helper devtools tests scripts deploy
       - run: .venv/bin/pytest -q
       - run: npm ci
         working-directory: web

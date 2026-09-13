@@ -4,7 +4,7 @@ import pytest_asyncio
 from devtools.fakes import MODEL, FakeHelper, FakeNode
 from gateway.app import create_app
 from gateway.config import Config
-from gateway.models import ModelPolicy, Policy
+from gateway.models import ModelPolicy, Policy, RecoveryPolicy
 
 TOKEN = "test-admin-secret-" + "x" * 32
 ORIGIN = "http://testserver"
@@ -19,6 +19,7 @@ async def env(tmp_path):
         secure_cookie=False,
         tick_seconds=3600,
         drain_timeout=0.2,
+        recovery_interval=3600,
     )
     node, helper = FakeNode(), FakeHelper()
     app = create_app(cfg, node, helper)
@@ -27,7 +28,11 @@ async def env(tmp_path):
         store.put(
             "settings",
             "policy",
-            Policy(models=[ModelPolicy(id=MODEL, alias="demo")], queue_seconds=1).model_dump(),
+            Policy(
+                models=[ModelPolicy(id=MODEL, alias="demo")],
+                queue_seconds=1,
+                recovery=RecoveryPolicy(enabled=False),
+            ).model_dump(),
         )
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url=ORIGIN) as client:
             yield app, client, node, helper, cfg

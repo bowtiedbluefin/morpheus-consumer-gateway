@@ -10,6 +10,8 @@ import time
 import httpx
 import pytest
 
+pytestmark = pytest.mark.skip(reason="Historical v0.1 characterization probes; current regressions are in tests/test_recovery.py")
+
 from devtools.fakes import MODEL
 from gateway.models import ModelPolicy
 from gateway.node import GatewayError

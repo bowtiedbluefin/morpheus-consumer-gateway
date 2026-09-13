@@ -44,3 +44,31 @@ while True: time.sleep(1)
         assert not supervisor.journal.exists()
     finally:
         await supervisor.stop()
+
+
+async def test_helper_restart_idempotency_and_journal_read(tmp_path):
+    import httpx
+
+    from node_helper.app import create_app
+
+    supervisor = Supervisor(tmp_path, [], {})
+    calls = []
+
+    async def restart(rating):
+        calls.append(rating)
+        return {"ready": True, "rating_hash": "verified"}
+
+    supervisor.restart = restart
+    app = create_app(supervisor)
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://helper") as client:
+        body = {"operation_id": "a" * 32}
+        assert (await client.post("/restart", json=body)).status_code == 200
+        assert (await client.post("/restart", json=body)).status_code == 200
+        assert len(calls) == 1
+        assert (await client.get("/operations/" + "a" * 32)).json()["state"] == "succeeded"
+        assert (await client.post("/restart", json={**body, "rating": Policy().rating()})).status_code == 409
+        journal = tmp_path / "gateway-journal"
+        journal.mkdir()
+        atomic_write(journal / ("b" * 32 + ".json"), b'{"stage":"not_submitted","completed":true}')
+        assert (await client.get("/journal/" + "b" * 32)).json()["completed"]
+        assert (await client.get("/journal/invalid")).status_code == 400

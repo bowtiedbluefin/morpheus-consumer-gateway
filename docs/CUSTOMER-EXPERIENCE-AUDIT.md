@@ -1,3 +1,5 @@
+> Historical audit of the v0.1 baseline. See [v0.2 fixes and remaining qualifications](RECOVERY-AND-AUDIT-FIXES.md) for current status.
+
 # Customer experience failure audit — September 13, 2026
 
 **Assessment: hold unattended customer rollout pending a reliability pass and live-node acceptance.** The initial implementation covers the intended happy path, but routine failures can strand session creation, make healthy models unavailable, lose edits, or interrupt inference through a misleading restart control.

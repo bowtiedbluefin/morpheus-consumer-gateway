@@ -23,9 +23,18 @@ class Weights(StrictModel):
     def sum_to_one(self):
         if not math.isclose(sum(self.model_dump().values()), 1, abs_tol=1e-9):
             raise ValueError("Rating weights must add up to 1 (100%)")
-        # The pinned Go scorer checks exact equality in this order.
-        if self.tps + self.ttft + self.duration + self.success + self.stake != 1:
-            raise ValueError("These decimals do not sum exactly to 1 in the node; adjust the last weight")
+        # Preserve the requested proportions. Only correct representation-level rounding.
+        values = list(self.model_dump().values())
+        for _ in range(8):
+            total = sum(values)
+            if total == 1:
+                break
+            i = max(range(len(values)), key=values.__getitem__)
+            values[i] = math.nextafter(values[i], math.inf if total < 1 else -math.inf)
+        if sum(values) != 1:
+            raise ValueError("Rating weights could not be normalized")
+        for name, value in zip(type(self).model_fields, values):
+            setattr(self, name, value)
         return self
 
 
@@ -68,6 +77,25 @@ class ModelPolicy(StrictModel):
         return value.lower()
 
 
+class RecoveryPolicy(StrictModel):
+    enabled: bool = True
+    auto_withdraw: bool = True
+    cleanup_untracked_expired: bool = True
+    cleanup_untracked_live: bool = False
+    orphan_grace_seconds: int = Field(default=600, ge=120, le=86400)
+    withdrawal_min_wei: str = Field(default="1000000000000000", pattern=r"^[0-9]{1,78}$")
+    withdrawal_interval_seconds: int = Field(default=300, ge=30, le=86400)
+    provider_cooldown_seconds: int = Field(default=120, ge=1, le=3600)
+
+
+class Budget(StrictModel):
+    max_session_stake_wei: str = Field(default="100000000000000000000", pattern=r"^[1-9][0-9]{0,77}$")
+    max_total_stake_wei: str = Field(default="400000000000000000000", pattern=r"^[1-9][0-9]{0,77}$")
+    max_price_per_second_wei: str = Field(default="1000000000000000000", pattern=r"^[1-9][0-9]{0,77}$")
+    min_liquid_mor_wei: str = Field(default="0", pattern=r"^[0-9]{1,78}$")
+    min_eth_wei: str = Field(default="100000000000000", pattern=r"^[0-9]{1,78}$")
+
+
 class Policy(StrictModel):
     revision: int = Field(default=0, ge=0)
     models: list[ModelPolicy] = Field(default_factory=list, max_length=100)
@@ -76,6 +104,8 @@ class Policy(StrictModel):
     max_sessions: int = Field(default=4, ge=1, le=32)
     queue_seconds: int = Field(default=30, ge=1, le=300)
     paused: bool = False
+    recovery: RecoveryPolicy = Field(default_factory=RecoveryPolicy)
+    budget: Budget = Field(default_factory=Budget)
 
     @model_validator(mode="after")
     def unique_models(self):

@@ -27,13 +27,54 @@ class Store:
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS records (kind TEXT, id TEXT, data TEXT, PRIMARY KEY(kind,id))"
         )
+        self.db.execute(
+            "CREATE INDEX IF NOT EXISTS record_state ON records(kind, json_extract(data, '$.state'))"
+        )
         self.db.commit()
+        self.error = None
         if self.get("settings", "policy") is None:
             self.put("settings", "policy", Policy().model_dump())
 
     def get(self, kind: str, id: str):
         row = self.db.execute("SELECT data FROM records WHERE kind=? AND id=?", (kind, id)).fetchone()
         return json.loads(row[0]) if row else None
+
+    def page(self, kind: str, limit=100, offset=0) -> list[dict]:
+        return [
+            json.loads(r[0])
+            for r in self.db.execute(
+                "SELECT data FROM records WHERE kind=? ORDER BY rowid DESC LIMIT ? OFFSET ?",
+                (kind, limit, offset),
+            )
+        ]
+
+    def sessions(self) -> list[dict]:
+        return [
+            json.loads(r[0])
+            for r in self.db.execute(
+                "SELECT data FROM records WHERE kind='session' AND json_extract(data,'$.state') "
+                "NOT IN ('closed','failed') ORDER BY rowid DESC"
+            )
+        ]
+
+    def prune(self):
+        cutoff = time.time() - 30 * 86400
+        with self.db:
+            self.db.execute(
+                "DELETE FROM records WHERE kind='session' AND json_extract(data,'$.state') "
+                "IN ('closed','failed') AND json_extract(data,'$.created_at') < ?",
+                (cutoff,),
+            )
+            self.db.execute(
+                "DELETE FROM records WHERE kind IN ('operation','request') "
+                "AND json_extract(data,'$.state') IN ('succeeded','failed','completed','interrupted') "
+                "AND json_extract(data,'$.created_at') < ?",
+                (cutoff,),
+            )
+            self.db.execute(
+                "DELETE FROM records WHERE kind='admin' AND json_extract(data,'$.expires') < ?",
+                (time.time(),),
+            )
 
     def all(self, kind: str) -> list[dict]:
         return [
@@ -56,13 +97,17 @@ class Store:
         return Policy.model_validate(self.get("settings", "policy"))
 
     def event(self, action: str, **fields):
+        # Optional diagnostics must never prevent releasing a lease or completing a mutation.
         id = uuid.uuid4().hex
-        self.put("event", id, {"id": id, "time": int(time.time()), "action": action, **fields})
-        with self.db:
-            self.db.execute(
-                "DELETE FROM records WHERE kind='event' AND rowid NOT IN "
-                "(SELECT rowid FROM records WHERE kind='event' ORDER BY rowid DESC LIMIT 500)"
-            )
+        try:
+            self.put("event", id, {"id": id, "time": int(time.time()), "action": action, **fields})
+            with self.db:
+                self.db.execute(
+                    "DELETE FROM records WHERE kind='event' AND rowid NOT IN "
+                    "(SELECT rowid FROM records WHERE kind='event' ORDER BY rowid DESC LIMIT 500)"
+                )
+        except sqlite3.Error:
+            self.error = "Storage write failed; check free disk space and backup health"
 
     def close(self):
         self.db.close()

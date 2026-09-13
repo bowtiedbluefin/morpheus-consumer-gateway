@@ -1,6 +1,5 @@
-// Characterization probes: passing means the customer-visible defect reproduced.
+// Regression tests for the independently reproduced customer-experience findings.
 import { expect, test, Page } from "@playwright/test";
-test.skip(true, "Historical v0.1 probes; current regressions are in e2e/reliability.spec.ts");
 const model = {
   id: "0x" + "1".repeat(64),
   alias: "demo",
@@ -74,6 +73,7 @@ async function mock(
     if (path === "/sessions") result = { sessions: [] };
     if (path === "/keys") result = { keys: [] };
     if (path === "/operations") result = { operations: [] };
+    if (path === "/events") result = { events: [] };
     await route.fulfill({ json: result });
   });
   await page.goto("/");
@@ -82,7 +82,7 @@ async function mock(
   ).toBeVisible();
 }
 
-test("edits made while Save is pending are silently discarded", async ({
+test("edits made while Save is pending remain in the unsaved draft", async ({
   page,
 }) => {
   const sent = latch(),
@@ -94,7 +94,7 @@ test("edits made while Save is pending are silently discarded", async ({
       return { json: { ...body, revision: body.revision + 1 } };
     }
   });
-  await page.getByRole("button", { name: "02 Models" }).click();
+  await page.getByRole("button", { name: "03 Models" }).click();
   const input = page.getByLabel("API model alias");
   await input.fill("first-edit");
   await page
@@ -103,13 +103,11 @@ test("edits made while Save is pending are silently discarded", async ({
   await sent.promise;
   await input.fill("newer-unsaved-edit");
   release.resolve();
-  await expect(input).toHaveValue("first-edit");
-  await expect(page.getByText("You have unsaved settings.")).not.toBeVisible();
+  await expect(input).toHaveValue("newer-unsaved-edit");
+  await expect(page.getByText("You have unsaved settings.")).toBeVisible();
 });
 
-test("expired login cannot return to sign-in using Sign out", async ({
-  page,
-}) => {
+test("expired login can always return to sign-in", async ({ page }) => {
   let expired = false;
   await mock(page, async () =>
     expired
@@ -123,12 +121,13 @@ test("expired login cannot return to sign-in using Sign out", async ({
   );
   expired = true;
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page.getByRole("alert")).toContainText("Sign in");
-  await expect(page.getByLabel("Administrator secret")).not.toBeVisible();
-  await expect(page.getByText("Gateway online", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Administrator secret")).toBeVisible();
+  await expect(
+    page.getByText("Gateway online", { exact: true }),
+  ).not.toBeVisible();
 });
 
-test("rating apply silently retains immediate restart choice from another page", async ({
+test("rating apply drains even when immediate restart was selected elsewhere", async ({
   page,
 }) => {
   const requested = latch();
@@ -140,11 +139,11 @@ test("rating apply silently retains immediate restart choice from another page",
       return { json: { id: "audit-op" } };
     }
   });
-  await page.getByRole("button", { name: "06 Node & activity" }).click();
+  await page.getByRole("button", { name: "07 Node & activity" }).click();
   await page
     .getByLabel("Restart immediately, interrupting active requests")
     .check();
-  await page.getByRole("button", { name: "03 Providers & rating" }).click();
+  await page.getByRole("button", { name: "04 Providers & rating" }).click();
   await expect(
     page.getByText("Apply restarts your node after active requests finish.", {
       exact: false,
@@ -154,10 +153,10 @@ test("rating apply silently retains immediate restart choice from another page",
     .getByRole("button", { name: "Apply and restart node", exact: true })
     .click();
   await requested.promise;
-  expect(restartBody).toEqual({ immediate: true, apply_rating: true });
+  expect(restartBody).toEqual({ immediate: false, apply_rating: true });
 });
 
-test("one hanging status response freezes other fresh data and keeps actions busy", async ({
+test("one hanging status response leaves fresh data and actions usable", async ({
   page,
 }) => {
   let hang = false;
@@ -191,7 +190,7 @@ test("one hanging status response freezes other fresh data and keeps actions bus
         },
       };
   });
-  await page.getByRole("button", { name: "02 Models" }).click();
+  await page.getByRole("button", { name: "03 Models" }).click();
   await page.getByLabel("API model alias").fill("saved-demo");
   await page
     .getByRole("button", { name: "Save settings", exact: true })
@@ -199,9 +198,9 @@ test("one hanging status response freezes other fresh data and keeps actions bus
   await entered.promise;
   await expect(
     page.getByRole("button", { name: "Browse node catalog" }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   await page.getByRole("button", { name: "01 Overview" }).click();
-  await expect(page.locator(".stat").first().locator("strong")).toHaveText("0");
+  await expect(page.locator(".stat").first().locator("strong")).toHaveText("1");
   release.resolve();
   await expect(page.locator(".stat").first().locator("strong")).toHaveText("1");
 });

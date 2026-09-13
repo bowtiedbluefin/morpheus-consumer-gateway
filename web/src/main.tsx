@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 
@@ -20,6 +20,17 @@ type Policy = {
   max_sessions: number;
   queue_seconds: number;
   paused: boolean;
+  recovery: {
+    enabled: boolean;
+    auto_withdraw: boolean;
+    cleanup_untracked_expired: boolean;
+    cleanup_untracked_live: boolean;
+    orphan_grace_seconds: number;
+    withdrawal_min_wei: string;
+    withdrawal_interval_seconds: number;
+    provider_cooldown_seconds: number;
+  };
+  budget: Record<string, string>;
 };
 type Session = {
   id: string;
@@ -30,6 +41,8 @@ type Session = {
   ends_at: number;
   stake_wei: string;
   busy: boolean;
+  last_error?: string;
+  recovery_candidates?: string[];
 };
 type Key = {
   id: string;
@@ -53,7 +66,12 @@ type Status = {
   demo: boolean;
   identity: { wallet: string; chain: string; version: string } | null;
   balances: { mor: string; eth: string } | null;
-  held: unknown;
+  held: { available: string; hold: string } | null;
+  live_sessions?: number;
+  updated_at?: number;
+  recovery?: { updated_at: number; errors: string[] };
+  wallet_scan?: { updated_at: number; offset: number };
+  effective_rating?: unknown;
   node_error: string | null;
   last_error: string | null;
   active_requests: number;
@@ -84,17 +102,32 @@ async function api<T>(
   path: string,
   method = "GET",
   body?: unknown,
+  extraHeaders: Record<string, string> = {},
 ): Promise<T> {
   const res = await fetch("/admin/api" + path, {
     method,
+    signal: AbortSignal.timeout(
+      path.includes("prewarm") || path.includes("/close") ? 250000 : 12000,
+    ),
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json", "X-CSRF-Token": csrf },
+    headers: {
+      "Content-Type": "application/json",
+      "X-CSRF-Token": csrf,
+      ...extraHeaders,
+    },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const data = await res.json();
+  if (res.status === 401 && path !== "/login")
+    window.dispatchEvent(new Event("auth-expired"));
+  const data = await res
+    .json()
+    .catch(() => ({ error: { message: `Invalid response (${res.status})` } }));
   if (!res.ok)
     throw new Error(
-      data.error?.message || data.detail || `Request failed (${res.status})`,
+      (data.error?.message || data.detail || `Request failed (${res.status})`) +
+        (res.headers.get("X-Request-ID")
+          ? ` · Request ${res.headers.get("X-Request-ID")}`
+          : ""),
     );
   return data;
 }
@@ -104,8 +137,13 @@ const when = (n: number | null) =>
   n ? new Date(n * 1000).toLocaleString() : "—";
 function mor(value: string | undefined) {
   try {
-    const n = BigInt(value || "0");
-    return `${n / 10n ** 18n}.${(n % 10n ** 18n).toString().padStart(18, "0").slice(0, 4)}`;
+    if (value === undefined) return "—";
+    const n = BigInt(value);
+    const fraction = (n % 10n ** 18n)
+      .toString()
+      .padStart(18, "0")
+      .replace(/0+$/, "");
+    return `${n / 10n ** 18n}${fraction ? "." + fraction : ""}`;
   } catch {
     return "—";
   }
@@ -119,6 +157,7 @@ const labels: Record<string, string> = {
 };
 const pages = [
   "Overview",
+  "Wallet & recovery",
   "Models",
   "Providers & rating",
   "Sessions",
@@ -126,6 +165,15 @@ const pages = [
   "Node & activity",
 ];
 
+async function copy(value: string) {
+  try {
+    await navigator.clipboard.writeText(value);
+  } catch {
+    throw new Error(
+      "Clipboard unavailable. Select and copy the visible value manually.",
+    );
+  }
+}
 function App() {
   const [signed, setSigned] = useState(false),
     [checking, setChecking] = useState(true),
@@ -148,25 +196,74 @@ function App() {
     [newKey, setNewKey] = useState("");
   const [immediate, setImmediate] = useState(false),
     [recoveries, setRecoveries] = useState<Record<string, string>>({});
-  const [walletSessions, setWalletSessions] = useState<unknown>(null);
+  const [walletSessions, setWalletSessions] = useState<{
+    sessions: Array<Record<string, string | number>>;
+  } | null>(null);
+  const [walletOffset, setWalletOffset] = useState(0),
+    [sessionOffset, setSessionOffset] = useState(0);
+  const [events, setEvents] = useState<Array<Record<string, unknown>>>([]);
+  const [keyConcurrency, setKeyConcurrency] = useState(2),
+    [keyRate, setKeyRate] = useState(60);
+  const [editingKey, setEditingKey] = useState<Key | null>(null);
+  const [lastRefresh, setLastRefresh] = useState(0),
+    [now, setNow] = useState(Date.now());
+  const inFlight = useRef(false),
+    draftVersion = useRef(0),
+    dirtyRef = useRef(false);
+  const policyRef = useRef<Policy | null>(null),
+    offsetRef = useRef(0);
+  const keyAttempt = useRef(crypto.randomUUID());
+  policyRef.current = policy;
+  dirtyRef.current = dirty;
+  offsetRef.current = sessionOffset;
 
   async function refresh() {
-    const results = await Promise.allSettled([
-      api<Status>("/status"),
-      api<{ sessions: Session[] }>("/sessions"),
-      api<{ keys: Key[] }>("/keys"),
-      api<{ operations: Operation[] }>("/operations"),
-    ]);
-    const [s, se, k, o] = results;
-    if (s.status === "fulfilled") setStatus(s.value);
-    if (se.status === "fulfilled") setSessions(se.value.sessions);
-    if (k.status === "fulfilled") setKeys(k.value.keys);
-    if (o.status === "fulfilled") setOperations(o.value.operations);
-    const failed = results.find((x) => x.status === "rejected");
-    if (failed?.status === "rejected") setError(String(failed.reason.message));
+    if (inFlight.current) return;
+    inFlight.current = true;
+    const offset = offsetRef.current;
+    try {
+      await Promise.allSettled(
+        [
+          api<Status>("/status").then((v) => {
+            setStatus(v);
+            setLastRefresh(Date.now());
+          }),
+          api<{ sessions: Session[] }>(`/sessions?offset=${offset}`).then(
+            (v) => {
+              if (offset === offsetRef.current) setSessions(v.sessions);
+            },
+          ),
+          api<{ keys: Key[] }>("/keys").then((v) => setKeys(v.keys)),
+          api<{ operations: Operation[] }>("/operations").then((v) =>
+            setOperations(v.operations),
+          ),
+          api<{ events: Array<Record<string, unknown>> }>("/events").then((v) =>
+            setEvents(v.events),
+          ),
+          api<Policy>("/policy").then((v) => {
+            if (!dirtyRef.current) {
+              setPolicy(v);
+              policyRef.current = v;
+            } else if (
+              policyRef.current &&
+              v.revision !== policyRef.current.revision
+            )
+              setError(
+                "Settings changed in another tab. Reload saved settings before saving this draft.",
+              );
+          }),
+        ].map((p) => p.catch((e) => setError(e.message))),
+      );
+    } finally {
+      inFlight.current = false;
+    }
   }
   async function load() {
-    setPolicy(await api<Policy>("/policy"));
+    const saved = await api<Policy>("/policy");
+    setPolicy(saved);
+    policyRef.current = saved;
+    setDirty(false);
+    dirtyRef.current = false;
     await refresh();
   }
   useEffect(() => {
@@ -174,14 +271,38 @@ function App() {
       .then(async (data) => {
         csrf = data.csrf;
         setSigned(true);
-        await load();
+        if (!dirtyRef.current) await load();
+        else void refresh();
       })
       .catch(() => {})
       .finally(() => setChecking(false));
   }, []);
   useEffect(() => {
+    const expired = () => {
+      setSigned(false);
+      setNewKey("");
+      csrf = "";
+      setError(
+        "Your admin session expired. Sign in again; your unsaved draft remains in this tab.",
+      );
+    };
+    window.addEventListener("auth-expired", expired);
+    return () => window.removeEventListener("auth-expired", expired);
+  }, []);
+  useEffect(() => {
+    setBids([]);
+  }, [selected, policy?.revision, policy?.providers]);
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (dirtyRef.current) e.preventDefault();
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, []);
+  useEffect(() => {
     if (!signed) return;
     const timer = setInterval(() => {
+      setNow(Date.now());
       void refresh();
     }, 5000);
     return () => clearInterval(timer);
@@ -192,7 +313,7 @@ function App() {
     setNotice("");
     try {
       await fn();
-      await refresh();
+      void refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -200,6 +321,9 @@ function App() {
     }
   }
   function change(next: Policy) {
+    draftVersion.current++;
+    dirtyRef.current = true;
+    policyRef.current = next;
     setPolicy(next);
     setDirty(true);
   }
@@ -214,15 +338,29 @@ function App() {
   }
   async function save() {
     if (policy) {
-      setPolicy(await api<Policy>("/policy", "PUT", policy));
-      setDirty(false);
+      const version = draftVersion.current;
+      const saved = await api<Policy>("/policy", "PUT", policy);
+      if (version === draftVersion.current) {
+        setPolicy(saved);
+        setDirty(false);
+        dirtyRef.current = false;
+      } else {
+        setPolicy((current) =>
+          current ? { ...current, revision: saved.revision } : saved,
+        );
+      }
+      setBids([]);
       setNotice(
         "Settings saved. Provider restrictions apply now; rating changes require Apply and restart.",
       );
     }
   }
-  async function restart(apply: boolean) {
-    await api("/node/restart", "POST", { immediate, apply_rating: apply });
+  async function restart(apply: boolean, force = false) {
+    await api("/node/restart", "POST", {
+      immediate: force,
+      apply_rating: apply,
+    });
+    setImmediate(false);
     setNotice("Restart scheduled. Follow its progress below.");
   }
   function addModel(model?: CatalogModel) {
@@ -273,7 +411,8 @@ function App() {
                 csrf = data.csrf;
                 setSecret("");
                 setSigned(true);
-                await load();
+                if (!dirtyRef.current) await load();
+                else void refresh();
               });
             }}
           >
@@ -302,7 +441,7 @@ function App() {
             API keys.
           </small>
         </section>
-        <footer>SELF-HOSTED CONSUMER GATEWAY · 0.1.0</footer>
+        <footer>SELF-HOSTED CONSUMER GATEWAY · 0.2.0</footer>
       </main>
     );
   if (!policy)
@@ -312,7 +451,7 @@ function App() {
         <button onClick={() => void action(load)}>Retry</button>
       </div>
     );
-  const open = sessions.filter((s) => s.state !== "closed");
+  const open = sessions.filter((s) => !["closed", "failed"].includes(s.state));
   return (
     <div className="shell">
       <aside>
@@ -337,14 +476,18 @@ function App() {
         <div className="sidebar-foot">
           <span className={"dot " + (status?.identity ? "green" : "")} />
           {status?.identity ? "Consumer node connected" : "Waiting for node"}
-          <small>Local control · v0.1.0</small>
+          <small>Local control · v0.2.0</small>
           <button
             className="link"
             onClick={() =>
               void action(async () => {
-                await api("/logout", "POST");
-                setSigned(false);
-                setNewKey("");
+                try {
+                  await api("/logout", "POST");
+                } finally {
+                  setSigned(false);
+                  setNewKey("");
+                  csrf = "";
+                }
               })
             }
           >
@@ -359,15 +502,23 @@ function App() {
             <h1>{page}</h1>
           </div>
           <span className="pill">
-            {status?.maintenance
-              ? "Restart in progress"
-              : status?.paused
-                ? "Paused"
-                : status?.node_error
-                  ? "Node unavailable"
-                  : "Gateway online"}
+            {!status
+              ? "Connecting"
+              : status?.maintenance
+                ? "Restart in progress"
+                : status?.paused
+                  ? "Paused"
+                  : status?.node_error
+                    ? "Node unavailable"
+                    : "Gateway online"}
           </span>
         </header>
+        {lastRefresh > 0 && now - lastRefresh > 15000 && (
+          <div className="banner warning">
+            Status is stale. Last received{" "}
+            {new Date(lastRefresh).toLocaleTimeString()}.
+          </div>
+        )}
         {status?.demo && (
           <div className="banner warning">
             DEMO · Simulated node and providers. No wallet, transactions or real
@@ -390,6 +541,13 @@ function App() {
         {dirty && (
           <div className="banner unsaved">
             You have unsaved settings.
+            <button
+              className="secondary"
+              disabled={busy}
+              onClick={() => void action(load)}
+            >
+              Reload saved settings
+            </button>
             <button disabled={busy} onClick={() => void action(save)}>
               Save settings
             </button>
@@ -417,9 +575,7 @@ function App() {
                     className="secondary"
                     onClick={() =>
                       void action(async () => {
-                        await navigator.clipboard.writeText(
-                          status?.base_url || "",
-                        );
+                        await copy(status?.base_url || "");
                         setNotice("Base URL copied.");
                       })
                     }
@@ -435,7 +591,7 @@ function App() {
             <div className="stats">
               <Stat
                 label="Open & pending sessions"
-                value={String(open.length)}
+                value={String(status?.live_sessions ?? open.length)}
                 foot={`${status?.active_requests || 0} active requests`}
               />
               <Stat
@@ -511,6 +667,214 @@ function App() {
                 )}
               </section>
             </div>
+          </>
+        )}
+        {page === "Wallet & recovery" && (
+          <>
+            <div className="section-intro">
+              <p>
+                Recovery closes dead sessions and returns eligible MOR to your
+                wallet. MOR still held by the contract becomes withdrawable only
+                after its lock expires. Closing and withdrawing use ETH for gas.
+              </p>
+            </div>
+            <div className="stats">
+              <Stat
+                label="Liquid MOR"
+                value={mor(status?.balances?.mor)}
+                foot="In your wallet"
+              />
+              <Stat
+                label="Withdrawable MOR"
+                value={mor(status?.held?.available)}
+                foot="Contract allows withdrawal now"
+              />
+              <Stat
+                label="Still locked MOR"
+                value={mor(status?.held?.hold)}
+                foot="Waiting for the contract lock to expire"
+              />
+            </div>
+            <section className="card">
+              <h3>Automatic recovery</h3>
+              <p className="muted">
+                Use a dedicated consumer wallet. Cleanup can affect expired
+                sessions created outside this gateway.
+              </p>
+              {(
+                [
+                  ["enabled", "Run automatic wallet recovery"],
+                  ["auto_withdraw", "Automatically withdraw eligible MOR"],
+                  [
+                    "cleanup_untracked_expired",
+                    "Close expired untracked wallet sessions",
+                  ],
+                  [
+                    "cleanup_untracked_live",
+                    "Also close live untracked wallet sessions after a grace period",
+                  ],
+                ] as const
+              ).map(([field, label]) => (
+                <label className="check" key={field}>
+                  <input
+                    type="checkbox"
+                    checked={policy.recovery[field]}
+                    onChange={(e) =>
+                      change({
+                        ...policy,
+                        recovery: {
+                          ...policy.recovery,
+                          [field]: e.target.checked,
+                        },
+                      })
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+              {policy.recovery.cleanup_untracked_live && (
+                <p className="warning-inline">
+                  This can interrupt another application using the same wallet.
+                  The grace period starts when this gateway discovers the
+                  session.
+                </p>
+              )}
+              <div className="form-grid">
+                {(
+                  [
+                    [
+                      "orphan_grace_seconds",
+                      "Untracked live session grace (seconds)",
+                      120,
+                      86400,
+                    ],
+                    [
+                      "withdrawal_interval_seconds",
+                      "Withdrawal interval (seconds)",
+                      30,
+                      86400,
+                    ],
+                    [
+                      "provider_cooldown_seconds",
+                      "Failed provider cooldown (seconds)",
+                      1,
+                      3600,
+                    ],
+                  ] as const
+                ).map(([field, label, min, max]) => (
+                  <label key={field}>
+                    {label}
+                    <input
+                      type="number"
+                      min={min}
+                      max={max}
+                      value={policy.recovery[field]}
+                      onChange={(e) =>
+                        change({
+                          ...policy,
+                          recovery: {
+                            ...policy.recovery,
+                            [field]: Number(e.target.value),
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                ))}
+                <label>
+                  Minimum withdrawal (wei)
+                  <input
+                    inputMode="numeric"
+                    pattern="[0-9]+"
+                    value={policy.recovery.withdrawal_min_wei}
+                    onChange={(e) =>
+                      change({
+                        ...policy,
+                        recovery: {
+                          ...policy.recovery,
+                          withdrawal_min_wei: e.target.value,
+                        },
+                      })
+                    }
+                  />
+                  <small>{mor(policy.recovery.withdrawal_min_wei)} MOR</small>
+                </label>
+              </div>
+              <div className="actions">
+                <button
+                  disabled={busy || dirty}
+                  onClick={() =>
+                    void action(async () => {
+                      await api("/recovery/run", "POST");
+                      setNotice(
+                        "Recovery scan scheduled. Follow Sessions and activity for results.",
+                      );
+                    })
+                  }
+                >
+                  Run recovery now
+                </button>
+                <button
+                  disabled={busy || dirty}
+                  onClick={() =>
+                    void action(async () => {
+                      await api("/wallet/withdraw", "POST");
+                      setNotice(
+                        "Withdrawal check scheduled. Eligible MOR above your threshold will be withdrawn. Follow activity for the result.",
+                      );
+                    })
+                  }
+                >
+                  Withdraw eligible MOR
+                </button>
+              </div>
+              <p>
+                Last recovery: {when(status?.recovery?.updated_at || null)} ·
+                Next wallet scan offset: {status?.wallet_scan?.offset ?? "—"}
+              </p>
+              {status?.recovery?.errors?.map((e) => (
+                <p className="warning-inline" key={e}>
+                  {e}
+                </p>
+              ))}
+            </section>
+            <section className="card">
+              <h3>Wallet limits</h3>
+              <p>
+                Amounts use wei for exact precision (1 MOR or ETH = 10¹⁸ wei).
+                The node checks the session stake limit immediately before
+                opening. The total includes managed sessions and contract-held
+                MOR; use this wallet only with this gateway.
+              </p>
+              <div className="form-grid">
+                {Object.entries({
+                  max_session_stake_wei: "Maximum stake per session",
+                  max_total_stake_wei: "Maximum managed and held stake",
+                  max_price_per_second_wei: "Maximum provider price per second",
+                  min_liquid_mor_wei: "Minimum liquid MOR reserve",
+                  min_eth_wei: "Minimum ETH gas balance",
+                }).map(([field, label]) => (
+                  <label key={field}>
+                    {label} (wei)
+                    <input
+                      inputMode="numeric"
+                      pattern="[0-9]+"
+                      value={policy.budget[field]}
+                      onChange={(e) =>
+                        change({
+                          ...policy,
+                          budget: { ...policy.budget, [field]: e.target.value },
+                        })
+                      }
+                    />
+                    <small>
+                      {mor(policy.budget[field])}{" "}
+                      {field === "min_eth_wei" ? "ETH" : "MOR"}
+                    </small>
+                  </label>
+                ))}
+              </div>
+            </section>
           </>
         )}
         {page === "Models" && (
@@ -677,7 +1041,10 @@ function App() {
                           m.warm_until
                             ? new Date(
                                 m.warm_until * 1000 -
-                                  new Date().getTimezoneOffset() * 60000,
+                                  new Date(
+                                    m.warm_until * 1000,
+                                  ).getTimezoneOffset() *
+                                    60000,
                               )
                                 .toISOString()
                                 .slice(0, 16)
@@ -704,6 +1071,23 @@ function App() {
                   </p>
                 )}
                 <div className="actions">
+                  <button
+                    className="secondary"
+                    disabled={busy || dirty || !m.enabled}
+                    onClick={() =>
+                      void action(async () => {
+                        const quote = await api<{
+                          estimated_stake_wei: string;
+                          binding_limit_wei: string;
+                        }>(`/models/${m.id}/quote`);
+                        setNotice(
+                          `Estimated stake: ${mor(quote.estimated_stake_wei)} MOR. Per-session limit: ${mor(quote.binding_limit_wei)} MOR. The node checks the limit again when opening.`,
+                        );
+                      })
+                    }
+                  >
+                    Estimate stake
+                  </button>
                   <button
                     className="secondary"
                     disabled={busy || dirty || !m.enabled}
@@ -1067,7 +1451,14 @@ function App() {
                               <button
                                 className="secondary"
                                 disabled={
-                                  busy || s.state === "closed" || !s.chain_id
+                                  busy ||
+                                  [
+                                    "closed",
+                                    "failed",
+                                    "closing",
+                                    "close_pending",
+                                  ].includes(s.state) ||
+                                  !s.chain_id
                                 }
                                 onClick={() =>
                                   void action(async () => {
@@ -1083,8 +1474,45 @@ function App() {
                               >
                                 Close
                               </button>
+                              <button
+                                className="link"
+                                disabled={
+                                  busy ||
+                                  !s.chain_id ||
+                                  [
+                                    "closed",
+                                    "failed",
+                                    "closing",
+                                    "close_pending",
+                                  ].includes(s.state)
+                                }
+                                onClick={() =>
+                                  void action(async () => {
+                                    await api(
+                                      `/sessions/${s.id}/close?stop_maintaining=true`,
+                                      "POST",
+                                    );
+                                    await load();
+                                    setNotice(
+                                      "Automatic replacement stopped; close requested.",
+                                    );
+                                  })
+                                }
+                              >
+                                Stop maintaining & close
+                              </button>
                             </td>
                           </tr>
+                          {s.last_error && (
+                            <tr>
+                              <td colSpan={6}>
+                                <p className="warning-inline">{s.last_error}</p>
+                                {s.recovery_candidates?.map((id) => (
+                                  <code key={id}>{id} </code>
+                                ))}
+                              </td>
+                            </tr>
+                          )}
                           {s.state === "open_unknown" && (
                             <tr>
                               <td colSpan={6}>
@@ -1134,24 +1562,130 @@ function App() {
               </section>
             )}
             <section className="card">
+              <div className="actions">
+                <button
+                  disabled={busy || sessionOffset === 0}
+                  onClick={() =>
+                    void action(async () => {
+                      const next = Math.max(0, sessionOffset - 100);
+                      setSessions(
+                        (
+                          await api<{ sessions: Session[] }>(
+                            `/sessions?offset=${next}`,
+                          )
+                        ).sessions,
+                      );
+                      setSessionOffset(next);
+                      offsetRef.current = next;
+                    })
+                  }
+                >
+                  Previous sessions
+                </button>
+                <button
+                  disabled={busy || sessions.length < 100}
+                  onClick={() =>
+                    void action(async () => {
+                      const next = sessionOffset + 100;
+                      setSessions(
+                        (
+                          await api<{ sessions: Session[] }>(
+                            `/sessions?offset=${next}`,
+                          )
+                        ).sessions,
+                      );
+                      setSessionOffset(next);
+                      offsetRef.current = next;
+                    })
+                  }
+                >
+                  Next sessions
+                </button>
+              </div>
               <h3>Wallet session recovery</h3>
               <p className="muted">
-                Read the latest 100 on-chain wallet sessions. Sessions created
-                outside this gateway are not automatically adopted or closed.
+                Browse wallet sessions in pages of 100. Expired untracked
+                sessions are cleaned up when enabled in Wallet & recovery. Live
+                untracked sessions require a separate opt-in.
               </p>
               <button
                 className="secondary"
                 disabled={busy}
                 onClick={() =>
                   void action(async () =>
-                    setWalletSessions(await api("/wallet/sessions")),
+                    setWalletSessions(
+                      await api(`/wallet/sessions?offset=${walletOffset}`),
+                    ),
                   )
                 }
               >
                 Inspect wallet sessions
               </button>
               {walletSessions !== null && (
-                <pre>{JSON.stringify(walletSessions, null, 2)}</pre>
+                <>
+                  <div className="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Session</th>
+                          <th>Provider</th>
+                          <th>Expires</th>
+                          <th>State</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {walletSessions.sessions.map((s) => (
+                          <tr key={String(s.Id)}>
+                            <td className="mono" title={String(s.Id)}>
+                              {short(String(s.Id))}
+                            </td>
+                            <td title={String(s.Provider)}>
+                              {short(String(s.Provider))}
+                            </td>
+                            <td>{when(Number(s.EndsAt))}</td>
+                            <td>
+                              {Number(s.ClosedAt)
+                                ? "Closed"
+                                : Number(s.EndsAt) < Date.now() / 1000
+                                  ? "Expired, needs close"
+                                  : "Open"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="actions">
+                    <button
+                      disabled={busy || walletOffset === 0}
+                      onClick={() =>
+                        void action(async () => {
+                          const next = Math.max(0, walletOffset - 100);
+                          setWalletSessions(
+                            await api(`/wallet/sessions?offset=${next}`),
+                          );
+                          setWalletOffset(next);
+                        })
+                      }
+                    >
+                      Previous wallet page
+                    </button>
+                    <button
+                      disabled={busy || walletSessions.sessions.length < 100}
+                      onClick={() =>
+                        void action(async () => {
+                          const next = walletOffset + 100;
+                          setWalletSessions(
+                            await api(`/wallet/sessions?offset=${next}`),
+                          );
+                          setWalletOffset(next);
+                        })
+                      }
+                    >
+                      Next wallet page
+                    </button>
+                  </div>
+                </>
               )}
             </section>
           </>
@@ -1170,12 +1704,18 @@ function App() {
                 onSubmit={(e) => {
                   e.preventDefault();
                   void action(async () => {
-                    const data = await api<{ key: string }>("/keys", "POST", {
-                      name: keyName,
-                      models: keyModel ? [keyModel] : [],
-                      concurrency: 2,
-                      requests_per_minute: 60,
-                    });
+                    const data = await api<{ key: string }>(
+                      "/keys",
+                      "POST",
+                      {
+                        name: keyName,
+                        models: keyModel ? [keyModel] : [],
+                        concurrency: keyConcurrency,
+                        requests_per_minute: keyRate,
+                      },
+                      { "Idempotency-Key": keyAttempt.current },
+                    );
+                    keyAttempt.current = crypto.randomUUID();
                     setNewKey(data.key);
                     setKeyName("");
                   });
@@ -1206,8 +1746,44 @@ function App() {
                     </select>
                   </label>
                 </div>
+                <div className="form-grid">
+                  <label>
+                    Concurrent requests
+                    <input
+                      type="number"
+                      min="1"
+                      max="32"
+                      value={keyConcurrency}
+                      onChange={(e) =>
+                        setKeyConcurrency(Number(e.target.value))
+                      }
+                    />
+                  </label>
+                  <label>
+                    Requests per minute
+                    <input
+                      type="number"
+                      min="1"
+                      max="600"
+                      value={keyRate}
+                      onChange={(e) => setKeyRate(Number(e.target.value))}
+                    />
+                  </label>
+                </div>
                 <button type="submit" disabled={busy || !keyName}>
                   Create key
+                </button>
+                <button
+                  type="button"
+                  className="link"
+                  onClick={() => {
+                    keyAttempt.current = crypto.randomUUID();
+                    setNotice(
+                      "New key attempt selected. Revoke any key whose secret was lost before creating its replacement.",
+                    );
+                  }}
+                >
+                  Start a new key attempt
                 </button>
               </form>
               {newKey && (
@@ -1221,7 +1797,7 @@ function App() {
                       className="secondary"
                       onClick={() =>
                         void action(async () => {
-                          await navigator.clipboard.writeText(newKey);
+                          await copy(newKey);
                           setNotice("API key copied.");
                         })
                       }
@@ -1237,6 +1813,80 @@ function App() {
             </section>
             <section className="card">
               <h3>Your application keys</h3>
+              {editingKey && (
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void action(async () => {
+                      await api(`/keys/${editingKey.id}`, "PUT", {
+                        name: editingKey.name,
+                        models: editingKey.models,
+                        concurrency: editingKey.concurrency,
+                        requests_per_minute: editingKey.requests_per_minute,
+                      });
+                      setEditingKey(null);
+                      setNotice("Key settings updated.");
+                    });
+                  }}
+                >
+                  <h4>Edit {editingKey.name}</h4>
+                  <div className="form-grid">
+                    <label>
+                      Concurrency
+                      <input
+                        type="number"
+                        min="1"
+                        max="32"
+                        value={editingKey.concurrency}
+                        onChange={(e) =>
+                          setEditingKey({
+                            ...editingKey,
+                            concurrency: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Requests per minute
+                      <input
+                        type="number"
+                        min="1"
+                        max="600"
+                        value={editingKey.requests_per_minute}
+                        onChange={(e) =>
+                          setEditingKey({
+                            ...editingKey,
+                            requests_per_minute: Number(e.target.value),
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Model access
+                      <select
+                        value={editingKey.models[0] || ""}
+                        onChange={(e) =>
+                          setEditingKey({
+                            ...editingKey,
+                            models: e.target.value ? [e.target.value] : [],
+                          })
+                        }
+                      >
+                        <option value="">All enabled models</option>
+                        {policy.models.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.alias}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                  <button disabled={busy}>Save key settings</button>
+                  <button type="button" onClick={() => setEditingKey(null)}>
+                    Cancel
+                  </button>
+                </form>
+              )}
               {keys.length === 0 ? (
                 <p className="muted">No keys created yet.</p>
               ) : (
@@ -1255,10 +1905,30 @@ function App() {
                     <tbody>
                       {keys.map((k) => (
                         <tr key={k.id}>
-                          <td>{k.name}</td>
+                          <td>
+                            {k.name}
+                            <small>
+                              {k.models.length
+                                ? k.models
+                                    .map(
+                                      (id) =>
+                                        policy.models.find((m) => m.id === id)
+                                          ?.alias || short(id),
+                                    )
+                                    .join(", ")
+                                : "All enabled models"}
+                            </small>
+                          </td>
                           <td className="mono">{k.prefix}…</td>
                           <td>{when(k.last_used)}</td>
                           <td>
+                            <button
+                              className="link"
+                              disabled={busy || !k.enabled}
+                              onClick={() => setEditingKey({ ...k })}
+                            >
+                              Edit limits & access
+                            </button>
                             {k.requests_per_minute}/min · {k.concurrency}{" "}
                             concurrent
                           </td>
@@ -1311,7 +1981,7 @@ function App() {
                   disabled={
                     busy || !status?.helper_connected || status.maintenance
                   }
-                  onClick={() => void action(() => restart(false))}
+                  onClick={() => void action(() => restart(false, immediate))}
                 >
                   Restart node
                 </button>
@@ -1350,7 +2020,7 @@ function App() {
               </p>
             </section>
             <section className="card">
-              <h3>Restart and configuration operations</h3>
+              <h3>Recovery, restart and configuration operations</h3>
               {!operations.length ? (
                 <p className="muted">No operations yet.</p>
               ) : (
@@ -1365,6 +2035,28 @@ function App() {
                   </div>
                 ))
               )}
+            </section>
+            <section className="card">
+              <h3>Recent activity</h3>
+              <p className="muted">
+                Request IDs, outcomes and recovery events. Prompt contents are
+                not stored.
+              </p>
+              {events.map((e) => (
+                <div className="operation" key={String(e.id)}>
+                  <strong>{String(e.action).replaceAll("_", " ")}</strong>
+                  <small>{when(Number(e.time))}</small>
+                  <code>
+                    {JSON.stringify(
+                      Object.fromEntries(
+                        Object.entries(e).filter(
+                          ([k]) => !["id", "action", "time"].includes(k),
+                        ),
+                      ),
+                    )}
+                  </code>
+                </div>
+              ))}
             </section>
             {status?.last_error && (
               <div className="banner warning">{status.last_error}</div>
@@ -1405,4 +2097,30 @@ function Empty({ title, text }: { title: string; text: string }) {
     </section>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    return this.state.failed ? (
+      <main className="login">
+        <section className="login-card">
+          <h1>Dashboard could not display this response</h1>
+          <p>Your gateway may still be running. Reload to reconnect.</p>
+          <button onClick={() => location.reload()}>Reload dashboard</button>
+        </section>
+      </main>
+    ) : (
+      this.props.children
+    );
+  }
+}
+createRoot(document.getElementById("root")!).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+);
