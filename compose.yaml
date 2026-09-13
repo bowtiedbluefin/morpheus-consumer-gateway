@@ -1,0 +1,90 @@
+name: morpheus-consumer-gateway
+
+services:
+  gateway:
+    build: .
+    restart: unless-stopped
+    init: true
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:-http://localhost:8000}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      ADMIN_TOKEN_FILE: /run/secrets/admin_token
+      NODE_PASSWORD_FILE: /run/secrets/node_password
+      NODE_URL: http://node:8082
+      HELPER_SOCKET: /control/helper.sock
+    secrets:
+      - admin_token
+      - node_password
+    volumes:
+      - gateway-data:/data
+      - control:/control
+    depends_on:
+      - node
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz', timeout=3)"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  node:
+    build:
+      context: .
+      dockerfile: deploy/node.Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-ghcr.io/morpheusais/morpheus-lumerin-node:v7.11.0@sha256:3b2b1dea272124ce3c71ab35132f5f8a6dad54bb1e59614a50401a76c062a2b1}
+    restart: unless-stopped
+    init: true
+    environment:
+      ENVIRONMENT: production
+      ETH_NODE_ADDRESS: ${ETH_NODE_ADDRESS:?Set your RPC URL in .env}
+      ETH_NODE_CHAIN_ID: ${ETH_NODE_CHAIN_ID:-8453}
+      WALLET_PRIVATE_KEY_FILE: /run/secrets/wallet_key
+      NODE_PASSWORD_FILE: /run/secrets/node_password
+      WEB_ADDRESS: 0.0.0.0:8082
+      PROXY_ADDRESS: 127.0.0.1:3333
+      IPFS_DISABLED: "true"
+      PROXY_STORE_CHAT_CONTEXT: "false"
+      PROXY_FORWARD_CHAT_CONTEXT: "false"
+      LOG_LEVEL_APP: warn
+      LOG_LEVEL_TCP: warn
+      LOG_LEVEL_ETH_RPC: warn
+    secrets:
+      - wallet_key
+      - node_password
+    volumes:
+      - node-data:/node-data
+      - control:/control
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+
+  ingress:
+    image: caddy:2.10.2-alpine
+    profiles: ["https"]
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on: [gateway]
+
+volumes:
+  gateway-data:
+  node-data:
+  control:
+  caddy-data:
+  caddy-config:
+
+secrets:
+  admin_token:
+    file: ./secrets/admin-token
+  node_password:
+    file: ./secrets/node-password
+  wallet_key:
+    file: ./secrets/wallet-key
