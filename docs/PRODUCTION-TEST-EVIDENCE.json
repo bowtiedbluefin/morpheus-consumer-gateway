@@ -1,0 +1,1813 @@
+{
+  "decision": "NO-GO",
+  "generated_at_utc": "2026-09-14T00:00:38.890416+00:00",
+  "application_under_test": "cbab1a030172542442988ea7000d2ebae3211dac",
+  "test_commit": "209d806fcde80d2763a407f3d8e2162e7b9c3232",
+  "upstream_node_commit": "99a8d86af1f9453d59797f9a208aa729ff3eb00d",
+  "node_version": "v7.11.0 with gateway patches",
+  "node_go_version": "1.25.14",
+  "runtime_fixes_during_campaign": false,
+  "chain_id": 8453,
+  "deployment": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "containers": [
+      {
+        "name": "/morpheus-consumer-gateway-gateway-1",
+        "image": "sha256:3bbf37d1abd1a45a1e71498ecc64b5c65db62db6ff1b3b45c895866ff9cbf26a",
+        "user": "10001:10001",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "ports": {
+          "8000/tcp": [
+            {
+              "HostIp": "127.0.0.1",
+              "HostPort": "8000"
+            }
+          ]
+        },
+        "docker_socket_mounted": false,
+        "health": "healthy",
+        "mount_targets": [
+          "/data",
+          "/control",
+          "/run/secrets/admin_token",
+          "/run/secrets/node_password"
+        ]
+      },
+      {
+        "name": "/morpheus-consumer-gateway-node-1",
+        "image": "sha256:3fa1448363f3eeb4fb59881ba6fc24d7aff2d143ac697a044edeb57296193824",
+        "user": "10001:10001",
+        "cap_drop": [
+          "ALL"
+        ],
+        "security_opt": [
+          "no-new-privileges:true"
+        ],
+        "ports": {},
+        "docker_socket_mounted": false,
+        "health": null,
+        "mount_targets": [
+          "/control",
+          "/node-data",
+          "/run/secrets/wallet_key",
+          "/run/secrets/node_password"
+        ]
+      }
+    ]
+  },
+  "ci": {
+    "conclusion": "success",
+    "headSha": "209d806fcde80d2763a407f3d8e2162e7b9c3232",
+    "status": "completed",
+    "updatedAt": "2026-09-13T23:31:26Z",
+    "url": "https://github.com/bowtiedbluefin/morpheus-consumer-gateway/actions/runs/34789698044"
+  },
+  "regression": {
+    "macos_passed": 128,
+    "linux_passed": 128,
+    "native_guard_tests_passed": 5,
+    "browser": {
+      "chromium": {
+        "startTime": "2026-09-13T22:38:59.346Z",
+        "duration": 7938.281000000001,
+        "expected": 6,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "firefox": {
+        "startTime": "2026-09-13T22:41:00.946Z",
+        "duration": 10218.461000000001,
+        "expected": 6,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "webkit": {
+        "startTime": "2026-09-13T22:43:39.081Z",
+        "duration": 11683.407,
+        "expected": 6,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      }
+    },
+    "backend_cases": [
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_auth_and_csrf_never_open_sessions",
+        "seconds": 0.018,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_cold_open_then_reuse_and_close",
+        "seconds": 0.012,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_concurrent_cold_requests_share_one_session",
+        "seconds": 0.111,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_stream_preserved_and_lease_released",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_malformed_stream_is_error_and_not_replayed",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_allowlist_empty_and_deny_precedence",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_denied_provider_not_reused",
+        "seconds": 0.063,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_policy_changes_during_open_quarantine_session",
+        "seconds": 0.11,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_ambiguous_open_blocks_duplicate_and_can_recover",
+        "seconds": 0.015,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_invalid_bind_cannot_adopt_someone_elses_session",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_revocation_while_waiting_blocks_inference",
+        "seconds": 0.115,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_key_scopes_and_rate_limit",
+        "seconds": 0.015,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_revision_conflict_and_bad_weights_do_not_replace_policy",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_restart_drains_and_dashboard_remains_live",
+        "seconds": 0.061,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_drain_timeout_does_not_kill_busy_node",
+        "seconds": 0.021,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_immediate_restart_and_failure_reporting",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_idle_and_until_expiry_retention",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_maintain_warms_then_replaces_near_expiry",
+        "seconds": 0.007,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_routing_injection_and_large_payload_rejected",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_events_do_not_store_prompt_content",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_single_owner_and_policy_validation",
+        "seconds": 0.002,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_provider_decline_tries_another_provider_before_chain_submission",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_blocking_provider_during_reuse_lookup_prevents_dispatch",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_cancelled_caller_does_not_cancel_or_duplicate_native_open",
+        "seconds": 0.107,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_recovery_preserves_uncertain_operations",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_gateway",
+        "test": "test_inference_deadline_includes_wait_for_response_headers",
+        "seconds": 0.023,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_real_tcp_node_protocol_opens_once_reuses_and_authenticates",
+        "seconds": 0.216,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_real_tcp_control_fault_never_opens_escrow[control_503]",
+        "seconds": 0.21,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_real_tcp_control_fault_never_opens_escrow[control_timeout]",
+        "seconds": 0.311,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_real_tcp_control_fault_never_opens_escrow[malformed_identity]",
+        "seconds": 0.215,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_real_tcp_lost_open_response_reconciles_without_second_post",
+        "seconds": 2.334,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_real_tcp_truncated_stream_emits_error_and_never_replays",
+        "seconds": 0.212,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_real_tcp_inference_deadline_bounds_header_wait",
+        "seconds": 0.313,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_slow_upload_over_tcp_times_out_without_wallet_work",
+        "seconds": 0.32,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_streamed_upload_size_limit_over_tcp",
+        "seconds": 0.211,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_http_boundaries",
+        "test": "test_connection_limit_is_bounded_and_releases_after_disconnect",
+        "seconds": 0.32,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_node_contract",
+        "test": "test_real_http_adapter_paths_auth_and_no_mutation_retry",
+        "seconds": 0.026,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_node_contract",
+        "test": "test_only_proven_pre_submission_errors_allow_provider_walk[provider healthcheck ping failed: dial failed-provider_declined]",
+        "seconds": 0.023,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_node_contract",
+        "test": "test_only_proven_pre_submission_errors_allow_provider_walk[failed to initiate session: unavailable-provider_declined]",
+        "seconds": 0.022,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_node_contract",
+        "test": "test_only_proven_pre_submission_errors_allow_provider_walk[provider self-reports model as not serviceable: offline-provider_declined]",
+        "seconds": 0.021,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_node_contract",
+        "test": "test_only_proven_pre_submission_errors_allow_provider_walk[failed to open session: transaction result unknown-node_rejected]",
+        "seconds": 0.022,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_node_contract",
+        "test": "test_only_proven_pre_submission_errors_allow_provider_walk[unexpected failure-node_rejected]",
+        "seconds": 0.022,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_node_contract",
+        "test": "test_withdraw_and_wallet_pagination_use_native_contract",
+        "seconds": 0.021,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_node_contract",
+        "test": "test_model_lookup_uses_real_paginated_catalog_route",
+        "seconds": 0.021,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[deepseek-v4-flahs-404-model_not_found]",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[ demo-404-model_not_found]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[demo -404-model_not_found]",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[dem\\u03bf-404-model_not_found]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-404-model_not_found]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[-400-invalid_request]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx-400-invalid_request]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[None-400-invalid_request]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[123-400-invalid_request]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[model9-400-invalid_request]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_invalid_model_fails_before_provider_or_wallet_work[model10-400-invalid_request]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_supported_alias_case_and_onchain_id[demo]",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_supported_alias_case_and_onchain_id[DEMO]",
+        "seconds": 0.022,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_supported_alias_case_and_onchain_id[0x1111111111111111111111111111111111111111111111111111111111111111]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_disabled_model_and_key_scope_are_distinct",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_eight_overlapping_requests_obey_session_capacity_and_keep_responses_isolated[1]",
+        "seconds": 0.068,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_eight_overlapping_requests_obey_session_capacity_and_keep_responses_isolated[2]",
+        "seconds": 0.069,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_eight_overlapping_requests_obey_session_capacity_and_keep_responses_isolated[4]",
+        "seconds": 0.07,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_two_models_can_serve_simultaneously_in_distinct_sessions",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_contracts",
+        "test": "test_saturated_key_does_not_block_another_key",
+        "seconds": 0.013,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[400]",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[401]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[403]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[404]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[413]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[422]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[429]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[500]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[502]",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_provider_status_is_classified_without_replay[503]",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_transport_failure_releases_lease_and_never_replays[ReadError]",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_transport_failure_releases_lease_and_never_replays[ReadTimeout]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_transport_failure_releases_lease_and_never_replays[ConnectError]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_malformed_nonstream_response_quarantines_provider[not-json]",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_malformed_nonstream_response_quarantines_provider[[]]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_malformed_nonstream_response_quarantines_provider[{}]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_malformed_nonstream_response_quarantines_provider[{\"error\":\"secret\"}]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_malformed_nonstream_response_quarantines_provider[\\xff]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_response_size_limit_and_next_key_admission",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_readonly_database_rejects_before_open_and_recovers",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_disk_full_before_escrow_fails_closed",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_cancellation_during_nonstream_inference_releases_key_and_session",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_race_between_two_tabs_preserves_first_saved_policy",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_sse_chunk_boundaries_comments_crlf_and_unicode[1]",
+        "seconds": 0.001,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_sse_chunk_boundaries_comments_crlf_and_unicode[2]",
+        "seconds": 0.0,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_sse_chunk_boundaries_comments_crlf_and_unicode[7]",
+        "seconds": 0.0,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_sse_chunk_boundaries_comments_crlf_and_unicode[10000]",
+        "seconds": 0.0,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_invalid_or_incomplete_sse_is_not_success[data: {bad}\\n\\n]",
+        "seconds": 0.0,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_invalid_or_incomplete_sse_is_not_success[data: {}\\n\\n]",
+        "seconds": 0.001,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_invalid_or_incomplete_sse_is_not_success[]",
+        "seconds": 0.0,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_invalid_or_incomplete_sse_is_not_success[data: [DONE]]",
+        "seconds": 0.0,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_production_faults",
+        "test": "test_admin_and_event_endpoints_never_return_secrets_or_prompts",
+        "seconds": 0.011,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_mature_mor_withdraws_and_held_mor_waits",
+        "seconds": 0.005,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_threshold_gas_and_interval_prevent_waste",
+        "seconds": 0.006,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_unknown_withdrawal_never_repeats_and_hot_session_still_works",
+        "seconds": 0.007,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_withdrawal_reverted_receipt_permits_later_retry",
+        "seconds": 0.005,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_lost_open_recovers_from_native_journal_without_second_open",
+        "seconds": 0.006,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_journal_proven_no_submission_unblocks_pool",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_scan_recovers_unknown_open_and_paginates_expired_orphans",
+        "seconds": 0.072,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_live_untracked_sessions_require_explicit_opt_in_and_grace",
+        "seconds": 0.006,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_close_lost_response_does_not_duplicate_then_reconciles",
+        "seconds": 0.006,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_session_budget_includes_contract_hold_and_native_binding_limit",
+        "seconds": 0.006,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_one_failed_maintained_model_does_not_starve_healthy_model",
+        "seconds": 0.005,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_unreadable_session_does_not_hide_healthy_one",
+        "seconds": 0.007,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_hot_borrow_does_not_wait_for_wallet_lock",
+        "seconds": 0.006,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_reconcile_does_not_resurrect_concurrently_invalidated_session",
+        "seconds": 0.006,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_provider_failure_quarantines_without_replaying_prompt",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_invalid_prompt_never_opens_escrow[messages0]",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_invalid_prompt_never_opens_escrow[messages1]",
+        "seconds": 0.008,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_invalid_prompt_never_opens_escrow[messages2]",
+        "seconds": 0.007,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_client_error_and_idempotency_are_preserved",
+        "seconds": 0.01,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_login_noise_cannot_lock_out_valid_admin_and_rotation_revokes",
+        "seconds": 0.012,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_helper_connectivity_is_observed",
+        "seconds": 0.007,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_stop_maintaining_close_and_lowered_pool_caps",
+        "seconds": 0.009,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_recovery",
+        "test": "test_human_percentages_normalize_to_native_exact_sum",
+        "seconds": 0.0,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_storage_recovery",
+        "test": "test_full_sqlite_page_budget_preserves_committed_settings",
+        "seconds": 0.003,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_storage_recovery",
+        "test": "test_corrupt_database_fails_startup_without_resetting_data",
+        "seconds": 0.001,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_storage_recovery",
+        "test": "test_process_kill_preserves_acknowledged_wal_commit",
+        "seconds": 0.065,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_storage_recovery",
+        "test": "test_restored_snapshot_reconciles_closed_chain_session",
+        "seconds": 0.015,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_storage_recovery",
+        "test": "test_retention_keeps_uncertain_financial_operations",
+        "seconds": 0.002,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_supervisor",
+        "test": "test_supervisor_restarts_real_child_and_rolls_back_invalid_config",
+        "seconds": 0.171,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_supervisor",
+        "test": "test_helper_restart_idempotency_and_journal_read",
+        "seconds": 0.006,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_supervisor",
+        "test": "test_packaged_node_has_network_defaults_and_existing_storage[8453]",
+        "seconds": 0.001,
+        "passed": true
+      },
+      {
+        "suite": "tests.test_supervisor",
+        "test": "test_packaged_node_has_network_defaults_and_existing_storage[84532]",
+        "seconds": 0.002,
+        "passed": true
+      }
+    ]
+  },
+  "failed_release_gates": {
+    "backend": [
+      {
+        "suite": "audits.production_readiness.test_release_gates",
+        "test": "test_nonfinite_extension_rejected_before_any_escrow",
+        "passed": false
+      },
+      {
+        "suite": "audits.production_readiness.test_release_gates",
+        "test": "test_invalid_provider_message_is_not_success[message0]",
+        "passed": false
+      },
+      {
+        "suite": "audits.production_readiness.test_release_gates",
+        "test": "test_invalid_provider_message_is_not_success[message1]",
+        "passed": false
+      },
+      {
+        "suite": "audits.production_readiness.test_release_gates",
+        "test": "test_invalid_provider_message_is_not_success[message2]",
+        "passed": false
+      },
+      {
+        "suite": "audits.production_readiness.test_release_gates",
+        "test": "test_provider_nonfinite_usage_is_error_not_success",
+        "passed": false
+      },
+      {
+        "suite": "audits.production_readiness.test_release_gates",
+        "test": "test_waiter_can_use_busy_session_if_extra_provider_capacity_declines",
+        "passed": false
+      },
+      {
+        "suite": "audits.production_readiness.test_release_gates",
+        "test": "test_completed_opener_does_not_starve_event_loop",
+        "passed": false
+      },
+      {
+        "suite": "audits.production_readiness.test_release_gates",
+        "test": "test_readiness_recovers_after_transient_storage_failure",
+        "passed": false
+      }
+    ],
+    "linux_failures": 8,
+    "mobile": {
+      "viewport_width": 390,
+      "content_width": 656,
+      "passed": false
+    }
+  },
+  "live_browser": [
+    {
+      "test": "live_browser_02 Wallet & recovery",
+      "passed": true
+    },
+    {
+      "test": "live_browser_03 Models",
+      "passed": true
+    },
+    {
+      "test": "live_browser_04 Providers & rating",
+      "passed": true
+    },
+    {
+      "test": "live_browser_05 Sessions",
+      "passed": true
+    },
+    {
+      "test": "live_browser_06 API keys",
+      "passed": true
+    },
+    {
+      "test": "live_browser_07 Node & activity",
+      "passed": true
+    },
+    {
+      "test": "live_browser_mobile_no_horizontal_overflow",
+      "passed": false
+    },
+    {
+      "test": "live_browser_no_uncaught_errors",
+      "passed": true,
+      "errors": []
+    }
+  ],
+  "live_sdk": {
+    "version": "3.13.0",
+    "tests": [
+      {
+        "test": "sdk_model_listing",
+        "passed": true
+      },
+      {
+        "test": "sdk_unicode_multiturn",
+        "passed": true
+      },
+      {
+        "test": "sdk_json_response_format",
+        "passed": true
+      },
+      {
+        "test": "sdk_tool_calling",
+        "passed": true
+      },
+      {
+        "test": "sdk_stream_with_usage",
+        "passed": true
+      },
+      {
+        "test": "sdk_wrong_model_typed_error",
+        "passed": true
+      }
+    ]
+  },
+  "overload": [
+    {
+      "concurrency": 8,
+      "passed": true,
+      "counts": {
+        "200": 8
+      },
+      "health_after": 200,
+      "max_latency_seconds": 0.057247084099799395,
+      "metrics": {
+        "calls": 8,
+        "opens": 8,
+        "peak": 8,
+        "duplicate_leases": 0,
+        "active": 0,
+        "waiting": 0,
+        "events": 16
+      }
+    },
+    {
+      "concurrency": 32,
+      "passed": true,
+      "counts": {
+        "200": 32
+      },
+      "health_after": 200,
+      "max_latency_seconds": 0.23496016720309854,
+      "metrics": {
+        "calls": 40,
+        "opens": 8,
+        "peak": 8,
+        "duplicate_leases": 0,
+        "active": 0,
+        "waiting": 0,
+        "events": 48
+      }
+    },
+    {
+      "concurrency": 64,
+      "passed": true,
+      "counts": {
+        "200": 64
+      },
+      "health_after": 200,
+      "max_latency_seconds": 0.4896392500959337,
+      "metrics": {
+        "calls": 104,
+        "opens": 8,
+        "peak": 8,
+        "duplicate_leases": 0,
+        "active": 0,
+        "waiting": 0,
+        "events": 112
+      }
+    },
+    {
+      "concurrency": 128,
+      "passed": true,
+      "counts": {
+        "200": 80,
+        "429": 48
+      },
+      "health_after": 200,
+      "max_latency_seconds": 0.5979828748386353,
+      "metrics": {
+        "calls": 184,
+        "opens": 8,
+        "peak": 8,
+        "duplicate_leases": 0,
+        "active": 0,
+        "waiting": 0,
+        "events": 240
+      }
+    },
+    {
+      "concurrency": 256,
+      "passed": true,
+      "counts": {
+        "200": 88,
+        "429": 158,
+        "503": 10
+      },
+      "health_after": 200,
+      "max_latency_seconds": 0.6962433338630944,
+      "metrics": {
+        "calls": 272,
+        "opens": 8,
+        "peak": 8,
+        "duplicate_leases": 0,
+        "active": 0,
+        "waiting": 0,
+        "events": 486
+      }
+    }
+  ],
+  "soak": {
+    "mode": "real HTTP, simulated provider, no wallet",
+    "errors": [],
+    "fixture_seeded_sessions": 8,
+    "warmup_requests": 15,
+    "elapsed_seconds": 3600.478432333097,
+    "requests": 215392,
+    "status_counts": {
+      "404": 32310,
+      "401": 10770,
+      "200": 172312
+    },
+    "incorrect": 0,
+    "final_metrics": {
+      "calls": 172327,
+      "opens": 8,
+      "peak": 8,
+      "duplicate_leases": 0,
+      "active": 0,
+      "waiting": 0,
+      "events": 500
+    },
+    "passed": true,
+    "actual_requests_per_second": 59.82316074045381,
+    "minute_p50_ms_range": [
+      118.38375008665025,
+      127.01489648316056
+    ],
+    "minute_p95_ms_range": [
+      227.14008297771215,
+      231.24620784074068
+    ],
+    "minute_p99_ms_range": [
+      262.8108330536634,
+      282.44583308696747
+    ],
+    "sampled_rss_kib_range": [
+      61632,
+      62704
+    ],
+    "sampled_sqlite_bytes_range": [
+      4468312,
+      4480648
+    ],
+    "scope": "Warm simulated provider only. Eight preseeded sessions, 50 ms provider delay. Excludes cold opening, chain and real provider throughput."
+  },
+  "wallet": {
+    "passed": true,
+    "verified_at": 1789344013.863839,
+    "initial": {
+      "block": "0x30e6101",
+      "eth": "2493364109255375",
+      "mor": "20500000000000000000"
+    },
+    "final": {
+      "eth": "2434209436498352",
+      "mor": "20500000000000000000"
+    },
+    "final_rpc_block": "0x30e6e15",
+    "held": {
+      "available": "0",
+      "hold": "0"
+    },
+    "fees_wei": "59154672757023",
+    "confirmed_transaction_count": 35,
+    "withdrawals": [
+      {
+        "id": "524782fb74a7497c9e59b7acfd5a2d6d",
+        "kind": "withdraw",
+        "state": "succeeded",
+        "created_at": 1789344002.9346204,
+        "eligible_before_wei": "7392395593543746086",
+        "transactions": [
+          {
+            "kind": "withdraw",
+            "hash": "0x84ae5ecc5cb6a6d9be9ad8ef6aaeeede620649550b00b5f7113f140f9eceb47d"
+          }
+        ],
+        "message": "MOR withdrawal confirmed",
+        "finished_at": 1789344003.533689
+      }
+    ],
+    "health": {
+      "/healthz": 200,
+      "/readyz": 200
+    },
+    "live_sessions": 0,
+    "active_requests": 0,
+    "queued": 0,
+    "funded_sessions_total": 11,
+    "new_campaign_sessions": 10,
+    "original_session_included": true,
+    "original_approval_and_open_fees_wei": "2914859374016",
+    "incremental_campaign_fees_wei": "56239813383007",
+    "all_gateway_row_states": {
+      "closed": 11,
+      "failed": 19
+    },
+    "aggregate_collateral_wei": "10197051532538223736",
+    "native_journal_count": 43,
+    "all_native_journals_completed": true,
+    "transaction_kind_counts": {
+      "close": 11,
+      "open": 11,
+      "approval": 12,
+      "withdraw": 1
+    },
+    "receipts": [
+      {
+        "hash": "0x0000b78e0370fd453a231f17596ee777c981644acec49df98548794f7ad749b0",
+        "kind": "close",
+        "status": 1,
+        "block": 51274900,
+        "fee_wei": "2633523830746"
+      },
+      {
+        "hash": "0x03048eb932e69bd6105123d2477c6aaaaa1cf20984bd96a5b9b00fe766f0d5e1",
+        "kind": "open",
+        "status": 1,
+        "block": 51275307,
+        "fee_wei": "2634937754362"
+      },
+      {
+        "hash": "0x0af9c8412252b0248c0225c60809c45159f5dfdb6fe722ebf0313a7864e6cce4",
+        "kind": "close",
+        "status": 1,
+        "block": 51275047,
+        "fee_wei": "2630476273993"
+      },
+      {
+        "hash": "0x103eb6b63f3fc7cd9ec2793397704415977cdfeacd3b6c84fdf7d62f906e595b",
+        "kind": "approval",
+        "status": 1,
+        "block": 51275306,
+        "fee_wei": "177606416152"
+      },
+      {
+        "hash": "0x12e32bfffb8a35fac61d73f55b4693756fef08cfe4f7867c995a041778827e38",
+        "kind": "approval",
+        "status": 1,
+        "block": 51275609,
+        "fee_wei": "177817762663"
+      },
+      {
+        "hash": "0x13d7b8a4d0ae48999474a5334c7a45487e504ed249f88ca2ec0567f474842270",
+        "kind": "approval",
+        "status": 1,
+        "block": 51275097,
+        "fee_wei": "177523023732"
+      },
+      {
+        "hash": "0x16a2affe0e39afef3a25d4ceb294fa4d913974cf18858d185d6996fb9505b485",
+        "kind": "close",
+        "status": 1,
+        "block": 51275369,
+        "fee_wei": "2519939043633"
+      },
+      {
+        "hash": "0x190d96513af93297967f3a2b213eb3391f0e08e80a880d769e651ab657653ccd",
+        "kind": "open",
+        "status": 1,
+        "block": 51275731,
+        "fee_wei": "2634940510430"
+      },
+      {
+        "hash": "0x1d3b862c957a84b6b3ab0fdad2338f7d9bce956fb3098f6fc52e2a21cb49df40",
+        "kind": "close",
+        "status": 1,
+        "block": 51274987,
+        "fee_wei": "2630346863986"
+      },
+      {
+        "hash": "0x1e75eb50a67cc8f0d079461877a5d1cf789c058e5b5de3cbf46c832124ce8268",
+        "kind": "open",
+        "status": 1,
+        "block": 51275504,
+        "fee_wei": "2634809536979"
+      },
+      {
+        "hash": "0x2896eb284525de772134631fb24bc1c5d8fd65731e63a5f297005ba0b06f40ea",
+        "kind": "close",
+        "status": 1,
+        "block": 51274897,
+        "fee_wei": "2732834155416"
+      },
+      {
+        "hash": "0x436bf8c42f7701593406f4ef968153a6230df38730d19ad9eed49b71331a97cc",
+        "kind": "close",
+        "status": 1,
+        "block": 51276076,
+        "fee_wei": "2151954946308"
+      },
+      {
+        "hash": "0x438b2a8b120901e315654a532b0f92b37a92f359ae80346ed380f6d2a94f5a00",
+        "kind": "approval",
+        "status": 1,
+        "block": 51273986,
+        "fee_wei": "177540278605"
+      },
+      {
+        "hash": "0x53401d845fb4f9558701ca667cffa0e7ef0237715b7e1988c7f2d3210cb007c0",
+        "kind": "close",
+        "status": 1,
+        "block": 51275894,
+        "fee_wei": "2152078691625"
+      },
+      {
+        "hash": "0x5384a0c17b131f9264200594c1f5a99411c81d5c5158ed3b912e782dfc326b20",
+        "kind": "open",
+        "status": 1,
+        "block": 51276083,
+        "fee_wei": "2634740660134"
+      },
+      {
+        "hash": "0x57750d26a9cef073413721125fecbf8e4c1e5d9e526f7fac7f7b9f23152aa2e3",
+        "kind": "approval",
+        "status": 1,
+        "block": 51275604,
+        "fee_wei": "177622953658"
+      },
+      {
+        "hash": "0x5bf77ad8dbe2407f7b8ac12b9914ea7346e534723617698c8518da5bafd7f81e",
+        "kind": "open",
+        "status": 1,
+        "block": 51275897,
+        "fee_wei": "2634746182143"
+      },
+      {
+        "hash": "0x65e0fe196495469e603082007489930ef299fa80ef8c029dd1229294057801f4",
+        "kind": "approval",
+        "status": 1,
+        "block": 51274740,
+        "fee_wei": "177545734780"
+      },
+      {
+        "hash": "0x662f67a0409d07aff7a22de55111047dc108d099daeb8752619e618826fa4cac",
+        "kind": "approval",
+        "status": 1,
+        "block": 51274685,
+        "fee_wei": "177556469516"
+      },
+      {
+        "hash": "0x73f889e1ebc7c01b9e33465f6f10958a74ed9a03b70597289255733eed347596",
+        "kind": "open",
+        "status": 1,
+        "block": 51275992,
+        "fee_wei": "2634788262338"
+      },
+      {
+        "hash": "0x848c5dc5d520d103a14abb84428dd5d1263dc6a367fe57c2e8ddbf5d841b0c09",
+        "kind": "approval",
+        "status": 1,
+        "block": 51275502,
+        "fee_wei": "177548595043"
+      },
+      {
+        "hash": "0x84992c505c91ec795b8329ff993dd9f88cc0ec185c90859b59f41b08c8012908",
+        "kind": "close",
+        "status": 1,
+        "block": 51275985,
+        "fee_wei": "2151902551528"
+      },
+      {
+        "hash": "0x84ae5ecc5cb6a6d9be9ad8ef6aaeeede620649550b00b5f7113f140f9eceb47d",
+        "kind": "withdraw",
+        "status": 1,
+        "block": 51277329,
+        "fee_wei": "922978792640"
+      },
+      {
+        "hash": "0x8875be1e8dbe9ca1868cba516db6afa9152eeb29efa717a9d8777aca760b8e36",
+        "kind": "close",
+        "status": 1,
+        "block": 51276107,
+        "fee_wei": "2151853191564"
+      },
+      {
+        "hash": "0x9d31a9ebe93c9a983b332bf958b159efdeb9e0437a854e6ec3200c98268c0f16",
+        "kind": "approval",
+        "status": 1,
+        "block": 51274745,
+        "fee_wei": "177550117255"
+      },
+      {
+        "hash": "0xaa44b82bd1cab9820117db45fd108eedddb4a6a91129db5931e92d3c6ec7dd95",
+        "kind": "open",
+        "status": 1,
+        "block": 51275099,
+        "fee_wei": "2634752833005"
+      },
+      {
+        "hash": "0xac15a299661156f7055e3e8a7068892ca3d4f461ad9271458e5c2890970b38e7",
+        "kind": "approval",
+        "status": 1,
+        "block": 51276082,
+        "fee_wei": "177517534235"
+      },
+      {
+        "hash": "0xaec05f5158e645c142b28974d133fec001907054c4db8f291a29e38a63ac99bf",
+        "kind": "approval",
+        "status": 1,
+        "block": 51275991,
+        "fee_wei": "177530108273"
+      },
+      {
+        "hash": "0xe1ea395a108b1f4890f3e6ba24d57b4d50587b495044bbdb4a83b71522c0ba43",
+        "kind": "approval",
+        "status": 1,
+        "block": 51275896,
+        "fee_wei": "177520024448"
+      },
+      {
+        "hash": "0xe2ce2fc9fd766bef448e8bc09ae96d9ac290fdfb7a97fb7a84ae45c7d182765a",
+        "kind": "open",
+        "status": 1,
+        "block": 51274747,
+        "fee_wei": "2634659357548"
+      },
+      {
+        "hash": "0xe8627854691fc7aa4cedfd0c31515b6830fe0770c9cba2424018db7ee4995d43",
+        "kind": "open",
+        "status": 1,
+        "block": 51274742,
+        "fee_wei": "2634803194391"
+      },
+      {
+        "hash": "0xe90d07f7cba6d70a7358acbf2304fac15d60469348c38ed0f13291f7bfcf9cd8",
+        "kind": "open",
+        "status": 1,
+        "block": 51274686,
+        "fee_wei": "2634754998497"
+      },
+      {
+        "hash": "0xf36416f221aee6b93dfc2dde16ddedeb66ac97f63fc3e67e46719c256d45b9f4",
+        "kind": "close",
+        "status": 1,
+        "block": 51275467,
+        "fee_wei": "2630195255618"
+      },
+      {
+        "hash": "0xf4bb445d594cbcb5cb2082c89adbe9594d30265d5ee38b96929a94934a4ae405",
+        "kind": "close",
+        "status": 1,
+        "block": 51275600,
+        "fee_wei": "2630457756368"
+      },
+      {
+        "hash": "0xfe8b3a2b98667278ff9f630e35674921a6afc35a4b369dba93256fdc9ee49f29",
+        "kind": "open",
+        "status": 1,
+        "block": 51273987,
+        "fee_wei": "2737319095411"
+      }
+    ],
+    "sessions": [
+      {
+        "id": "7494c0c18d82408ba10587d724e5588b",
+        "chain_id": "0x9ae7e15cf2c4626ebc1aee9ec64710e1f5508c14a01ee4a70b45bf0a16508e24",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0x23da7e8ce578bfead351caff6b0f4e976ea99676",
+        "state": "closed",
+        "stake_wei": "447948266207947205",
+        "opened_at": 1789341513,
+        "ends_at": 1789341813,
+        "closed_at": 1789341561,
+        "close_tx": "0x8875be1e8dbe9ca1868cba516db6afa9152eeb29efa717a9d8777aca760b8e36",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0xac15a299661156f7055e3e8a7068892ca3d4f461ad9271458e5c2890970b38e7"
+          },
+          {
+            "kind": "open",
+            "hash": "0x5384a0c17b131f9264200594c1f5a99411c81d5c5158ed3b912e782dfc326b20"
+          }
+        ]
+      },
+      {
+        "id": "48c9f888e1c24576928cbb76d562d2c4",
+        "chain_id": "0xe7b25f8e3067b76d9f1347bf4df626755654389606d4601875c916ffe3110590",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0x23da7e8ce578bfead351caff6b0f4e976ea99676",
+        "state": "closed",
+        "stake_wei": "447948266207947205",
+        "opened_at": 1789341331,
+        "ends_at": 1789341631,
+        "closed_at": 1789341499,
+        "close_tx": "0x436bf8c42f7701593406f4ef968153a6230df38730d19ad9eed49b71331a97cc",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0xaec05f5158e645c142b28974d133fec001907054c4db8f291a29e38a63ac99bf"
+          },
+          {
+            "kind": "open",
+            "hash": "0x73f889e1ebc7c01b9e33465f6f10958a74ed9a03b70597289255733eed347596"
+          }
+        ]
+      },
+      {
+        "id": "2ddae1ae2ba34a0f952474d464ccbbc7",
+        "chain_id": "0x11f3fd6d8ef24334ca586c0c4c72a9c75c8f8c9cd5287343959bbd18fe3ac37b",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0x23da7e8ce578bfead351caff6b0f4e976ea99676",
+        "state": "closed",
+        "stake_wei": "447948193553776055",
+        "opened_at": 1789341141,
+        "ends_at": 1789341441,
+        "closed_at": 1789341317,
+        "close_tx": "0x84992c505c91ec795b8329ff993dd9f88cc0ec185c90859b59f41b08c8012908",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0xe1ea395a108b1f4890f3e6ba24d57b4d50587b495044bbdb4a83b71522c0ba43"
+          },
+          {
+            "kind": "open",
+            "hash": "0x5bf77ad8dbe2407f7b8ac12b9914ea7346e534723617698c8518da5bafd7f81e"
+          }
+        ]
+      },
+      {
+        "id": "wallet-7e6251eb219fcf336eae94bd0b6a287db7ca52b538f1ca7ef4c7c4a865230567",
+        "chain_id": "0x7e6251eb219fcf336eae94bd0b6a287db7ca52b538f1ca7ef4c7c4a865230567",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0x23da7e8ce578bfead351caff6b0f4e976ea99676",
+        "state": "closed",
+        "stake_wei": "447948188781966101",
+        "opened_at": null,
+        "ends_at": 1789341109,
+        "closed_at": 1789341135,
+        "close_tx": "0x53401d845fb4f9558701ca667cffa0e7ef0237715b7e1988c7f2d3210cb007c0",
+        "transactions": null
+      },
+      {
+        "id": "fb1ea88e47034a1d9eeb2b7f6c8cb395",
+        "chain_id": "0x75df39daf89fd2426b56a6ca576dc4a4aa7e9008c17edcce5334137aed4fe5a2",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0xdc34045b60e68a2ab55086ad73b3fe4cc91308c1",
+        "state": "closed",
+        "stake_wei": "1138717546147394126",
+        "opened_at": 1789340355,
+        "ends_at": 1789341254,
+        "closed_at": 1789340547,
+        "close_tx": "0xf4bb445d594cbcb5cb2082c89adbe9594d30265d5ee38b96929a94934a4ae405",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0x848c5dc5d520d103a14abb84428dd5d1263dc6a367fe57c2e8ddbf5d841b0c09"
+          },
+          {
+            "kind": "open",
+            "hash": "0x1e75eb50a67cc8f0d079461877a5d1cf789c058e5b5de3cbf46c832124ce8268"
+          }
+        ]
+      },
+      {
+        "id": "8ff5698d55694191a457c5ec6166dcf0",
+        "chain_id": "0xd18ce5aa1b78fde8d48b49edd1211960a850d0a6d3df1c117a19efe5299c0606",
+        "model": "0x6324881ed8f1322f7c42e98eb8c560ef13f4fc78f54d4d99a1ff1950190b4f1c",
+        "provider": "0x010208ec11f3a844dd2f5003a2807dde982ebb03",
+        "state": "closed",
+        "stake_wei": "569645800481160986",
+        "opened_at": 1789339961,
+        "ends_at": 1789340560,
+        "closed_at": 1789340085,
+        "close_tx": "0x16a2affe0e39afef3a25d4ceb294fa4d913974cf18858d185d6996fb9505b485",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0x103eb6b63f3fc7cd9ec2793397704415977cdfeacd3b6c84fdf7d62f906e595b"
+          },
+          {
+            "kind": "open",
+            "hash": "0x03048eb932e69bd6105123d2477c6aaaaa1cf20984bd96a5b9b00fe766f0d5e1"
+          }
+        ]
+      },
+      {
+        "id": "dfa06fc912c143d78c79c2765f8e9f52",
+        "chain_id": "0x66369ef8cf03a5b46ac32329f014e3b38a9e3b0e760093be9aedf95e23423a34",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0x23da7e8ce578bfead351caff6b0f4e976ea99676",
+        "state": "closed",
+        "stake_wei": "1339379434274786557",
+        "opened_at": null,
+        "ends_at": 1789340444,
+        "closed_at": 1789340281,
+        "close_tx": "0xf36416f221aee6b93dfc2dde16ddedeb66ac97f63fc3e67e46719c256d45b9f4",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0x13d7b8a4d0ae48999474a5334c7a45487e504ed249f88ca2ec0567f474842270"
+          },
+          {
+            "kind": "open",
+            "hash": "0xaa44b82bd1cab9820117db45fd108eedddb4a6a91129db5931e92d3c6ec7dd95"
+          }
+        ]
+      },
+      {
+        "id": "3cabbe27cc5445d28e925ccc60d84213",
+        "chain_id": "0x603635deac2bb444f12ed02bd45c05d57be8d329722b8c3005e780791199b0c7",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0x23da7e8ce578bfead351caff6b0f4e976ea99676",
+        "state": "closed",
+        "stake_wei": "892919476668612488",
+        "opened_at": 1789338841,
+        "ends_at": 1789339440,
+        "closed_at": 1789339141,
+        "close_tx": "0x2896eb284525de772134631fb24bc1c5d8fd65731e63a5f297005ba0b06f40ea",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0x9d31a9ebe93c9a983b332bf958b159efdeb9e0437a854e6ec3200c98268c0f16"
+          },
+          {
+            "kind": "open",
+            "hash": "0xe2ce2fc9fd766bef448e8bc09ae96d9ac290fdfb7a97fb7a84ae45c7d182765a"
+          }
+        ]
+      },
+      {
+        "id": "2cf8c23cba0540c2aa0344d3ca505e12",
+        "chain_id": "0x0aa6af5d35e383c3d5bfd3043d5aaf3f482d7d88dbcd03623af261585cf363e5",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0x23da7e8ce578bfead351caff6b0f4e976ea99676",
+        "state": "closed",
+        "stake_wei": "892919476668612488",
+        "opened_at": 1789338831,
+        "ends_at": 1789339430,
+        "closed_at": 1789339441,
+        "close_tx": "0x0af9c8412252b0248c0225c60809c45159f5dfdb6fe722ebf0313a7864e6cce4",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0x65e0fe196495469e603082007489930ef299fa80ef8c029dd1229294057801f4"
+          },
+          {
+            "kind": "open",
+            "hash": "0xe8627854691fc7aa4cedfd0c31515b6830fe0770c9cba2424018db7ee4995d43"
+          }
+        ]
+      },
+      {
+        "id": "536fc0263781409fbdf3865d16c7b101",
+        "chain_id": "0x4794b1871a23c0a569aaf00dca70f8c2c05c22c6aa4fa4be78305f467e8c4062",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0xbe7462798fc20affa0982d27af1eebef9c270611",
+        "state": "closed",
+        "stake_wei": "892919467156707374",
+        "opened_at": 1789338719,
+        "ends_at": 1789339318,
+        "closed_at": 1789339321,
+        "close_tx": "0x1d3b862c957a84b6b3ab0fdad2338f7d9bce956fb3098f6fc52e2a21cb49df40",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0x662f67a0409d07aff7a22de55111047dc108d099daeb8752619e618826fa4cac"
+          },
+          {
+            "kind": "open",
+            "hash": "0xe90d07f7cba6d70a7358acbf2304fac15d60469348c38ed0f13291f7bfcf9cd8"
+          }
+        ]
+      },
+      {
+        "id": "e308082424894764b6eb161bb39ab721",
+        "chain_id": "0xe3b1d0a5476c321bbe5605f3cd7e90c0759d96c3b30f9de2eea77dc7fe2a821c",
+        "model": "0xc2c4b037ff12e0aa81178deac52aeed902b36189b9e6feae22b72324c9221130",
+        "provider": "0xbe7462798fc20affa0982d27af1eebef9c270611",
+        "state": "closed",
+        "stake_wei": "2678757416389313151",
+        "opened_at": 1789337321,
+        "ends_at": 1789339120,
+        "closed_at": 1789339147,
+        "close_tx": "0x0000b78e0370fd453a231f17596ee777c981644acec49df98548794f7ad749b0",
+        "transactions": [
+          {
+            "kind": "approval",
+            "hash": "0x438b2a8b120901e315654a532b0f92b37a92f359ae80346ed380f6d2a94f5a00"
+          },
+          {
+            "kind": "open",
+            "hash": "0xfe8b3a2b98667278ff9f630e35674921a6afc35a4b369dba93256fdc9ee49f29"
+          }
+        ]
+      }
+    ]
+  },
+  "cleanup": {
+    "test_key_ids_revoked": [
+      "acfd6bd5ed0377c56e8e1942"
+    ],
+    "user_keys_preserved": true,
+    "active_requests": 0,
+    "live_sessions": 0,
+    "recovery_enabled": true,
+    "auto_withdraw": true
+  },
+  "log_privacy": {
+    "credential_occurrences": {
+      "deepseek-api-key": 0,
+      "node-password": 0,
+      "admin-token": 0,
+      "wallet-key": 0,
+      "rpc_url": 0
+    },
+    "prompt_canary_occurrences": {
+      "SDK_STREAM_OK": 0,
+      "AFTER_CRASH_OK": 0,
+      "DRAIN_OK": 0,
+      "NATIVE_CRASH_RECOVERED": 0
+    },
+    "passed": true
+  },
+  "dependency_scans": {
+    "python_advisories": 0,
+    "npm_advisories": 0,
+    "native_binary": {
+      "advisories": 53,
+      "modules": 18,
+      "additional_module_only": 19
+    },
+    "native_source": {
+      "advisories": 32,
+      "modules": 19,
+      "additional_package_only": 24,
+      "additional_module_only": 17
+    },
+    "caveat": "Static matches are not proof of remote exploitability; counts are not additive.",
+    "container_os_scanned": false
+  },
+  "local_artifact_sha256": {
+    "after-concurrency-sessions.json": "d677ed4b606401dadc295246950af6c5ca9d814dac44aa1589d6b46c70e6f557",
+    "after-core-status.json": "2659cb0e2ef8c62dfffa1995a010ddd18180b7bdf811a7b0f88f3dd9c35c2cee",
+    "after-crash-response.json": "18e92ba2dbd97b238328019b3946d11c79923e38c8d562e5a50eeab286cff88b",
+    "after-crash-sessions.json": "21d904ebdb562c9fff1dc0800ac4bd76641c4dc97d5c24e469c49445fb68f170",
+    "after-crash-status.json": "32da42200a8c9d1bb33e9f26906ed16e0c9d7c7a9b997b86f26d0e24c9536b8d",
+    "after-lifecycle-sessions.json": "965f47bbf85da1cb7d0bd0591d4d12c2faa8d8b8c42fb5395e421e873c393e1d",
+    "after-lifecycle-status.json": "071d30bc45875314c35be54541f8015d59f28ea0d08dff4d4a349de61a899c39",
+    "after-node-crash-sessions.json": "e082f610f82e7961dd62960dfd812dd6f81f41bfd36a247992e02a9d0e88c13d",
+    "at-2300-sessions.json": "dc506c9e65628aafa3d0373b43201309ac62b2eef32a5f7c8bfaca6dc53071b2",
+    "at-2300-status.json": "a20a220ccc82523a3858bfdf5021d3c3e10629514f7005dcf0793397367d436e",
+    "backend-junit.xml": "fd56f9ff735681f11065273abb263272b19267a5b7638e4a24f8cc6ce7b35f10",
+    "baseline.json": "d3ee858a3294f5f86c160aab927de3221d35824c28754e726e96bf8a566b1c50",
+    "browser-chromium.json": "9af0a6c7da5c8f1d655ea2fbbb1c7a49ee91a8348e5b6b65ecefd338762703a8",
+    "browser-firefox.json": "96d71534bf786419c1250d45bdd744601d2e33a3d8e0e1cebf7ea5df5af6746e",
+    "browser-release-gates.json": "55ebb9a7308bc77c8f47624228ae3d0309012a9ae8a58e27984830cc55aa8e91",
+    "browser-webkit.json": "654bb1cb13d17c49d9c40af5023b988cbe4bdbb7abef5163868c8ed1f36a9f42",
+    "campaign-cleanup.json": "3326912a4eb2810e660ceebc2f0fc87210e51136b9df4d7f000f7668991fc0b2",
+    "ci-result.json": "69a0ac9f71c5d1f2489adb3c47e69155b97873f54832cd32dd5068975dbf054a",
+    "ci.log": "5eb0c45965d6894ac752c666358b95c5c38fa70d6b0754f5669a682e47eac015",
+    "concurrency-samples.json": "5b1acb414f7973d369fea4b20c2ad69c3475d6ca3a44c2e0e0db96b3949ec91b",
+    "deepseek-v4-flash-multimodel-response.json": "b45186f574a6f88e55783f87f88bf46ff2cec1cdad905826189664b6488be8cc",
+    "deployment-inspection.json": "9a3cc242e7c16e2036a01d6d91772ca51402889c061bfd5a9a1289f63fb16cb2",
+    "diagnostic-open-300.json": "83a444c9d6ff8592facb72b3eabecaa83475827f65498751a2db9f77795dfaa2",
+    "docker-stats.jsonl": "a25640512fac8afe9d2c65666ec4f5b6246f267460d8d9f128eb4b2216e1f188",
+    "faults-junit.xml": "38dbeffa0508d68346dbcc72d9d553dca039f95219a3469477908cfdbfc38ce7",
+    "final-gateway-restart.log": "2902d086e9a5380c6416727cabd1cae309fa3cbea3532c45bd20881042184970",
+    "final-operations.json": "1516a82274ae8d38845523cc237ab6ebafefa614f90ae4b1e095463b5162edee",
+    "final-policy.json": "3a8f1487766fe142b53d595566c573e150f5b311e2e0e8b5c2a0cb4ab99cc96f",
+    "final-prewithdraw-status.json": "2f6c554e574a43d64718a4cde95676f902fc3bfcca3648b813e4cc22382887a3",
+    "final-sessions.json": "8a9f806fe1a6c148c269dd8d75fa2f45b2419f77a3d9f3f84b5d72ff9d76a502",
+    "final-status.json": "4c47b78d3175cf1383a0e39578b2e9695eacb34cb1d60fcc53744bd381327f40",
+    "final-wallet-sessions.json": "ed9c8391408b94840ce129cbfab9caf98e0c8d8205fc115e5d100c7d01694c1f",
+    "govulncheck-install.log": "4572572d9f7339d46e085d6cf949cb52560527398d1c27f7585c63a2ed003030",
+    "http-boundaries-junit.xml": "798533b76076b2ec56a669a6cd63bbc305a3e7cbb27e4ce4266959d16ef878fb",
+    "initial-balance-block.json": "6f51ed4d9b8119273c75c6ce13cec8500811348cfe8564761f9c216fb5495a87",
+    "initial-balances-verified.json": "72868301107d1767a602144fdf081ad09457d313ccb992bb9404e83a97f5740f",
+    "linux-build.log": "ec4ca03a59f402d8dbba953c67ce1725bc0145313d7810f940918c2d57898241",
+    "linux-release-gates.log": "5a28f27d6058f9def7033eeee4ede30aee745c9b33c7e4d9ab39094a4488ddf4",
+    "linux-tests.log": "5e895ba872a5da29a38cd74e8f5c029b62d9d34d28d457e843c7bd627a4fd96a",
+    "live-after-restart-response.json": "3ee63ea299d42d9623a05f526addd61338ee4c14431111eb1ccec40411821796",
+    "live-browser.json": "1eff4f2eda090ddd0a799a8c1996b1e7f49fe6f682df8a4ac63c9215a19ed8ce",
+    "live-catalog.json": "561873a7e10e4bd527f80bd935d3e8546e179ca17efe28b8a0749ecdf3ce970b",
+    "live-concurrency-multiprovider.json": "87c750e116cb1e9fb77a216a9ec43fce5fbcdf4d8a1917659f877ad1f878dc39",
+    "live-core.json": "d103ec27122fe11f41c995819f570d14a43f8f707a7c3185ad1a0ddd8da048b7",
+    "live-crash.json": "e183724bd1727e5782259184ffad371c6f27f05ef652b08ae7428a84e6e17adc",
+    "live-dashboard-mobile.png": "edad8a59fab138ca64a31c93acf51ffc27be97d4440c0b8a977ab47235275bef",
+    "live-dashboard.png": "61f062e39f75b6e544376b7a1f3217693957bbd0a117648c70e398a2cd59edd8",
+    "live-drain-response.json": "c5603f4b9a86f19a80682dacb1aa9fa6e250ad1664a73b688ccf4ca36b511921",
+    "live-lifecycle.json": "5966da71070b97ed71a9ee88ef20463a3b7339ca60084722fc9a00858a5e99d0",
+    "live-maintain-301.json": "2eb087415431a9cbcc8ce8bc83bf01f7c4f38318ef59c0912fb3cc986fc4e9d5",
+    "live-maintain.json": "c7bc67c168d4c0e00c85622b369ac6418c73d416fa862ceb57b09cef4028e85e",
+    "live-multimodel-llama.json": "3cec155e84c0bc52e26b6035296746ceb844d6a71d4d13c88a1aec83281fe8ae",
+    "live-multimodel-qwen-awq.json": "cd1c9435521f278a29e4f21cf08fbbd68c15ea9b4cd9fd900ba3f8f825fb1590",
+    "live-multimodel.json": "75889fd12d7cfbfed265545fb5090450f2b67bb3e38c0ea1d9247944d8a4eb4e",
+    "live-node-crash.json": "15c5fe560b5abdadd934b799475b6a9e28b8ef98ef4e868a1a816df39231ca4f",
+    "live-orphan-recovery.json": "5d99e025e79510e81a8a6e93c079a9c4af5124df79378fb25fb94720c0df9cfe",
+    "live-sdk.json": "f0289f8d81f6d3fe59026730096f9b38409b10a4adc65bc73a344049d5a3abb1",
+    "llama-test-multimodel-response.json": "ed3b51177bf9086b2579b62da6a0213134c15adfb835d7b69092f48bd4a7a04f",
+    "log-privacy-scan.json": "c7cb49f34e8823dc6b410865876116915b23ce838eab7c199857a24ab4c6dd81",
+    "native-build-info.txt": "c57beec19b847825cb47c9afe77ac6451a3d409df93609caca220f615b1c5553",
+    "native-crash-recovery-response.json": "5ee97a0664e2be02303a98410c7ea2b95ab66ad8e2947db0e80a5551d5385779",
+    "native-journals.json": "bb819e3afd9896d63d4c27ecafe4451c48bfc7eef3fa60581baf0ca086440c93",
+    "native-source-vulnerability-scan.txt": "4e48b0dabb9c8dd281020df1d7694083f7c5281bb11a896ee1d51d6fe6dda797",
+    "native-source-vulnerability-summary.json": "3459b3581314871e41978df1978f950cb0b1f58eeb833b3cd0f5895dfd5bc8aa",
+    "native-vulnerability-scan.txt": "5f89a450e80be32b1d4e2dace460f99fbf1d02fa8f09c87594d9ebdea2e22dc7",
+    "native-vulnerability-summary.json": "675a5a32d3e8a6a8e67905fc67af096710db06122dce4f0bea79b0f52090c47d",
+    "npm-audit.json": "9baca110f6906dbea78529c64b32cf240b2bb2e8515f4f21748c3dcba22226e8",
+    "orphan-native-open.json": "5e4eec68d4f2bfecc096291cae778820dc528efdbd95061b849fca08e2f4fc6d",
+    "overload.json": "012a89c6a16dd42a96d04e189745bc18de2409410a99764a9785e37153ecf4fe",
+    "overload.log": "9d204c69b8690927a9a39eca0d8bc79a9e725652724ae078ccbc8a4bd62a8100",
+    "python-audit.json": "bb29db83d8abd260fab2746ce026450fb5ac6f157bb71fae8ade0bd6417c9a91",
+    "qwen-awq-test-multimodel-response.json": "6e9bb3dfeb90e7c7ad750c2f1dc87d7819028cda155e89ee35943b32e3819843",
+    "qwen-test-multimodel-response.json": "ffadb0b9e9cac975ce619cfce1b2288c970aa3d84fd7ddaf52675cce455a204b",
+    "release-gates-junit.xml": "a5864e4dff103f232411977d7ac404eea50a688511a47323acf016969d95bcbb",
+    "release-gates.log": "aa93954803601078176fb713ab83faaec4150bc76a8cffd8f09241978ed040e6",
+    "restored-policy.json": "3a8f1487766fe142b53d595566c573e150f5b311e2e0e8b5c2a0cb4ab99cc96f",
+    "rpc-final-params.json": "f963e5bf507abcb95992058705fb184409e6fbc30b15a8911f048e3ea3f1dd2b",
+    "sdk-install.log": "70e54fbd87a6515c7c3f78c0748641e7635b9e6917395af8bf45c15a4d8bc995",
+    "sdk-json_response_format.json": "83795307390ac864e2b1cc83a8e15329730aafb6151f290e8f099017f173c998",
+    "sdk-tool_calling.json": "a7241ffab800a53354d9d4a67757eb730638423568eced9c949fe5924d1bc213",
+    "sdk-unicode_multiturn.json": "73887995ebf767a773f0720d038686b5cc4c233b497e08192a86abe9159961dd",
+    "security-install.log": "f069589ccd1f7e19c2414e8dce90d671b6dc2e13e9cc5e212154c8fa7a459f40",
+    "soak-debug.json": "86cc006226311c8386d24e2f63e047f560b4b08b84df3d3a7b69ec9c6828f9a5",
+    "soak-debug.log": "2a5fb19c7a5fa5acce919c399f8d9b055001870147d6697610e3c11c5e2d8f7f",
+    "soak-seeded.json": "fd2abcbeb082d1d1873f51b5b71133e02d308eb34c71182894e76bb2085a1a1f",
+    "soak-seeded.log": "6e424e7d3888602b4a07e094baa55c2593bb48ec0136942bdf28ee2adc2f69b7",
+    "soak-smoke.json": "e2229f5f5d72dd5d9d303c60eb243bd2d16049ff9c1d6491c4ed8cb3bedf878b",
+    "soak-smoke.log": "b978e604544c7e6b00026b15ecd0d93f9906007004e3dbac3680468443091d54",
+    "soak-stack.json": "fe83d81efed1a087af3739fc04d2d810ee3a554c9bb982410195f6a68c3d6609",
+    "soak-stack.log": "673b039d5bb31003bcae5cf7280cfc8903a9624563358f191e688dae0e9a90fb",
+    "soak-warm.json": "ac0a04ba8e8341099eb2710bc6ebf687a4e4fb11b8504749c8435b4cdfb7e870",
+    "soak-warm.log": "9b8272eb24c0c4687d37a5d96e003a881d2e07bb9e2a75ea53cd5eb3abd0a460",
+    "soak.log": "fc117f0019c10c4145f58fab9aa15d5b2b33f2ca878472faa134e2d6afaa23fa",
+    "storage-junit.xml": "edf2ab414bd197a23f6b448960127ebd355f0175c852f5eea867e45491135bf9",
+    "transaction-hashes.json": "a3601552895350ef6f8665d6ee72213c7f73294dbba2ea5dd739ebe756f1a843",
+    "transaction-receipts.json": "1dc7bbe15b613d0c39c5675dfe89ff473f587b5419197f73dd26eb3a0e331604",
+    "wallet-accounting.json": "0d11dfdc75431fb8f526c02ba51ea63b4091aae31bd86deba65ed42d6df09d43",
+    "wallet-monitor.json": "3405c465eefdb24653cbae8fbca7a53c7d561f8dfc41ea337ad68b3c3484f2f8"
+  }
+}

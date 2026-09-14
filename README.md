@@ -4,7 +4,7 @@ Run your own Morpheus API endpoint beside your consumer node. Give an applicatio
 
 The browser dashboard has ordinary fields and buttons for model selection, session duration, provider allowlists/blocklists, rating weights, API keys, and node restarts. Nothing to install on the computer using the dashboard.
 
-**Recovery update: v0.2.0.** The implementation is tested against simulated node responses and real local subprocesses. Both deployment images build. Funded, live-network integration has **not** been performed; complete the [live acceptance procedure](docs/VALIDATION.md) before relying on it for unattended use.
+**Production status: NO-GO.** The September 13–14, 2026 campaign exercised real funded sessions, crashes, cleanup, browsers and load. It found unresolved release blockers, including a cold-start concurrency hang. Read the [full testing report](docs/PRODUCTION-READINESS-REPORT.md), [scenario matrix](docs/PRODUCTION-TEST-MATRIX.md) and [reproductions](audits/production_readiness/README.md) before relying on this build for unattended use.
 
 ![Dashboard running with an explicitly labeled simulated node](docs/images/dashboard.png)
 

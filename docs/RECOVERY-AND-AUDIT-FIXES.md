@@ -1,5 +1,7 @@
 # Recovery and customer-experience fixes — v0.2
 
+The subsequent [production-readiness campaign](PRODUCTION-READINESS-REPORT.md) exercised these changes against funded sessions and found additional release blockers. Its NO-GO decision and acceptance findings supersede this earlier validation checkpoint.
+
 Implemented September 13, 2026. This extends the original customer-experience audit; it is not a claim of funded live-network acceptance. The executable regression suites are `tests/test_recovery.py`, `tests/test_gateway.py`, `tests/test_node_contract.py`, `tests/test_supervisor.py` and `web/e2e/`.
 
 ## What customers now get
