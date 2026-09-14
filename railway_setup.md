@@ -2,7 +2,7 @@
 
 Run two services in one Railway project: the gateway provides the web dashboard and application API; the node handles the consumer wallet, provider connections and on-chain sessions. The gateway can change rating configuration, restart the node and read recovery journals over an authenticated private connection.
 
-**Image publication status:** Both image names below are build targets. Docker Hub publication is currently blocked because the available account has no push access to the `bowtiedbluefin` namespace. Do not begin the image-based walkthrough until the registry pull checks in section 1 pass. Building directly from this GitHub repository is also described below.
+**Image publication status:** Both images below are published on Docker Hub. Anonymous registry access and both AMD64/ARM64 manifests were verified; Railway does not need Docker Hub credentials to use this release.
 
 ## 1. Images and prerequisites
 
@@ -15,7 +15,14 @@ Use these matching, versioned images:
 
 Both images are built for `linux/amd64` and `linux/arm64`. Railway's documented image workflow targets AMD64; Apple Silicon's default ARM64 build alone is insufficient. [Railway image deployment guide](https://docs.railway.com/guides/private-container-registry)
 
-Before recording, confirm publication:
+Published image index digests (use `IMAGE@sha256:...` instead of the tag to pin the exact release):
+
+| Image | Digest |
+| --- | --- |
+| `bowtiedbluefin/morpheus-consumer-gateway` | `sha256:eaa1e95d9c1f46d15f563acf494b8400045109aa90a558a76ba3097a2f1240f2` |
+| `bowtiedbluefin/morpheus-consumer-node` | `sha256:fcf032f026a3566e4874990c69c7459d12bf4e59f275fa7021f4c6b48fcd7df6` |
+
+You can inspect the published release before recording:
 
 ```sh
 docker buildx imagetools inspect bowtiedbluefin/morpheus-consumer-node:railway-20260914.1
@@ -45,11 +52,11 @@ Create a project and add two services from **Docker Image**. Use the image names
 
 Attach the volumes before the first successful startup. Railway mounts a service's volume at the configured path at runtime. Keep one replica per service, disable Serverless/sleep, and keep the default image start command. [Railway volumes](https://docs.railway.com/volumes), [volume limits](https://docs.railway.com/volumes/reference)
 
-These are prebuilt images, so no source build or pre-deploy command is needed in Railway. If the images are private, configure Docker Hub registry credentials in each service's Source settings. Those credentials are separate from all application secrets below. Railway currently requires Pro for directly deploying private registry images. [Private registries](https://docs.railway.com/builds/private-registries)
+These are public prebuilt images, so no source build, pre-deploy command or Docker Hub login is needed in Railway. If you later use a private image fork, configure registry credentials in each service's Source settings. Those credentials are separate from all application secrets below. Railway currently requires Pro for directly deploying private registry images. [Private registries](https://docs.railway.com/builds/private-registries)
 
 ### GitHub build alternative
 
-Connect both services to `bowtiedbluefin/morpheus-consumer-gateway`, selecting branch `fix/recovery-and-customer-reliability` until this change is merged. Keep the repository root as the Root Directory. For the gateway use `Dockerfile`; for the node set `RAILWAY_DOCKERFILE_PATH=deploy/node.Dockerfile`. The same volumes, variables and health checks below apply. This avoids waiting for Docker Hub publication, but requires Railway access to the private repository and builds the node in Railway. [Dockerfiles](https://docs.railway.com/builds/dockerfiles)
+As an alternative to the prebuilt images, connect both services to `bowtiedbluefin/morpheus-consumer-gateway`, selecting branch `fix/recovery-and-customer-reliability` until this change is merged. Keep the repository root as the Root Directory. For the gateway use `Dockerfile`; for the node set `RAILWAY_DOCKERFILE_PATH=deploy/node.Dockerfile`. The same volumes, variables and health checks below apply. This requires Railway access to the private repository and builds the node in Railway. [Dockerfiles](https://docs.railway.com/builds/dockerfiles)
 
 ## 3. Configure the node
 
@@ -252,6 +259,8 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 For subsequent releases, use a new matching immutable tag rather than overwriting the demonstrated tag. Do not pass wallet/private credentials as build arguments. The Dockerfiles copy only application/runtime assets; `.dockerignore` excludes local secrets and test data.
 
 The node remains pinned to upstream v7.11.0 with the existing collateral/journal/recovery patches and upgraded dependencies. The [remediation report](docs/REMEDIATION-REPORT.md) explains its security disposition and broader production acceptance limits.
+
+The published gateway includes source through commit `46c9eea`; the node image was built from `cfa23f5` (the subsequent commit only formats gateway favicon markup). [GitHub CI passed for `46c9eea`](https://github.com/bowtiedbluefin/morpheus-consumer-gateway/actions/runs/34802724846), including backend/browser checks, both Docker builds, volume ownership checks and the native source security gate. Both public registry manifests returned HTTP 200 without account credentials and include `linux/amd64` and `linux/arm64`.
 
 **Completed local verification:** 167 backend tests passed; both architecture builds passed; both AMD64 images initialized root-owned mounts and ran application code as UID 10001. The isolated pair passed startup, wrong-model rejection without opening a session, rating application/native restart over private HTTP, and preservation of wallet identity, rating, keys and operation history after replacing both containers. Native API/helper access passed on IPv4 and IPv6; unauthenticated helper access was rejected. The existing native source security gate passed. No funded transaction was submitted by this Railway packaging smoke test.
 
