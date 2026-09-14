@@ -1,0 +1,19 @@
+ proxy-router/go.mod                                |  286 ++--
+ proxy-router/go.sum                                | 1410 +++++---------------
+ proxy-router/internal/blockchainapi/controller.go  |   49 +-
+ proxy-router/internal/blockchainapi/service.go     |   64 +-
+ .../blockchainapi/session_expiry_handler.go        |    1 +
+ proxy-router/internal/blockchainapi/structs/req.go |    1 +
+ proxy-router/internal/lib/gateway_progress.go      |  167 +++
+ proxy-router/internal/lib/gateway_progress_test.go |   90 ++
+ proxy-router/internal/lib/gateway_stake.go         |   27 +
+ proxy-router/internal/lib/gateway_stake_test.go    |   42 +
+ proxy-router/internal/proxyapi/controller_http.go  |  737 +---------
+ proxy-router/internal/proxyapi/docker_manager.go   |  437 ------
+ proxy-router/internal/proxyapi/ipfs_manager.go     |  493 +------
+ proxy-router/internal/proxyapi/requests.go         |   99 +-
+ .../repositories/registries/session_router.go      |    4 +
+ .../internal/repositories/wallet/hdwallet.go       |    2 +-
+ proxy-router/internal/system/controller.go         |    7 +-
+ proxy-router/internal/system/structs.go            |    9 +-
+ 18 files changed, 849 insertions(+), 3076 deletions(-)

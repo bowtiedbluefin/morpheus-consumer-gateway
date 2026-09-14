@@ -19,8 +19,8 @@ jobs:
       - run: python -m venv .venv
       - run: .venv/bin/pip install -r requirements-dev.lock
       - run: .venv/bin/pip install --no-deps -e .
-      - run: .venv/bin/ruff check gateway node_helper devtools tests scripts
-      - run: .venv/bin/ruff format --check gateway node_helper devtools tests scripts
+      - run: .venv/bin/ruff check gateway node_helper devtools tests scripts deploy
+      - run: .venv/bin/ruff format --check gateway node_helper devtools tests scripts deploy
       - run: .venv/bin/pytest -q
       - run: npm ci
         working-directory: web
@@ -35,3 +35,8 @@ jobs:
       - run: docker compose build
         env:
           ETH_NODE_ADDRESS: https://rpc.example.invalid
+      - name: Verify mounted volumes and privilege drop
+        run: |
+          docker run --rm --user 0:0 --tmpfs /data morpheus-consumer-gateway-gateway python -c 'import os; from pathlib import Path; assert os.getuid() == 10001; Path("/data/check").write_text("ok")'
+          docker run --rm --user 0:0 --tmpfs /node-data morpheus-consumer-gateway-node python -c 'import os; from pathlib import Path; assert os.getuid() == 10001; Path("/node-data/check").write_text("ok")'
+      - run: docker build --target security -f deploy/node.Dockerfile .

@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import hmac
 import json
 import os
 import signal
@@ -7,7 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import Field
 
@@ -32,6 +33,7 @@ class Rating(StrictModel):
 
 class RestartRequest(StrictModel):
     rating: Rating | None = None
+    operation_id: str | None = Field(default=None, pattern=r"^[a-f0-9]{32}$")
 
 
 def atomic_write(path: Path, content: bytes):
@@ -68,6 +70,7 @@ class Supervisor:
         self.node_url, self.password = node_url, password
         self.readiness_seconds = readiness_seconds
         self.last_error = None
+        self.health = {"ready": False}
 
     async def start(self):
         # Command comes exclusively from trusted server setup, never the HTTP request.
@@ -97,7 +100,10 @@ class Supervisor:
                 try:
                     res = await client.get(self.node_url + "/config")
                     if res.status_code == 200:
-                        return
+                        balance = await client.get(self.node_url + "/blockchain/balance")
+                        if balance.status_code == 200:
+                            self.health = {"ready": True}
+                            return
                 except httpx.HTTPError:
                     pass
                 await asyncio.sleep(0.5)
@@ -105,6 +111,7 @@ class Supervisor:
 
     async def restart(self, rating: dict | None):
         async with self.lock:
+            self.health = {"ready": False}
             if rating is not None:
                 old = self.rating_path.read_bytes()
                 atomic_write(self.backup, old)
@@ -132,15 +139,44 @@ class Supervisor:
             return {"ready": True, "rating_hash": hashlib.sha256(self.rating_path.read_bytes()).hexdigest()}
 
     async def monitor(self):
+        failures = 0
         while True:
             await asyncio.sleep(5)
-            if not self.lock.locked() and self.process and self.process.returncode is not None:
-                async with self.lock:
-                    self.last_error = "Node exited; supervisor restarted it"
-                    await self.start()
+            try:
+                if self.lock.locked():
+                    continue
+                if self.process and self.process.returncode is not None:
+                    async with self.lock:
+                        self.last_error = "Node exited; supervisor restarted it"
+                        await self.start()
+                async with httpx.AsyncClient(
+                    timeout=2, auth=("admin", self.password), trust_env=False
+                ) as client:
+                    config = await client.get(self.node_url + "/config")
+                    failures = 0 if config.status_code == 200 else failures + 1
+                    balance = await client.get(self.node_url + "/blockchain/balance")
+                    self.health = {"ready": config.status_code == 200 and balance.status_code == 200}
+            except httpx.HTTPError:
+                failures += 1
+                self.health = {"ready": False}
+            except Exception:
+                self.last_error = "Node monitoring needs attention"
+            if failures >= 3 and not self.lock.locked():
+                try:
+                    await self.restart(None)
+                    failures = 0
+                except Exception:
+                    self.last_error = "Unresponsive node could not be restarted"
 
 
 def create_app(supervisor=None):
+    from gateway.runtime import validate_helper_token
+    from node_helper.run import transport
+
+    transport()  # Reject network mode without a valid credential before starting a child.
+    token = secret("HELPER_TOKEN")
+    if token:
+        validate_helper_token(token)
     if supervisor is None:
         directory = Path(os.getenv("NODE_DATA_DIR", "/node-data"))
         directory.mkdir(parents=True, exist_ok=True)
@@ -148,7 +184,29 @@ def create_app(supervisor=None):
         wallet = secret("WALLET_PRIVATE_KEY")
         if len(password) < 32 or not wallet:
             raise RuntimeError("Node password and wallet secret files are required")
+        (directory / "storage").mkdir(parents=True, exist_ok=True, mode=0o700)
         env = dict(os.environ)
+        # Published v7 network defaults; explicit deployment values take precedence.
+        networks = {
+            "8453": (
+                "https://base.blockscout.com/api/v2",
+                "0x6aBE1d282f72B474E54527D93b979A4f64d3030a",
+                "0x7431aDa8a591C955a994a21710752EF9b882b8e3",
+            ),
+            "84532": (
+                "https://base-sepolia.blockscout.com/api/v2",
+                "0xA328196f2438DADA5ab729E39388D86896c27c85",
+                "0x5C80Ddd187054E1E4aBBfFCD750498e81d34FfA3",
+            ),
+        }
+        chain = env.get("ETH_NODE_CHAIN_ID", "8453")
+        if chain not in networks:
+            raise RuntimeError("Supported node networks are Base and Base Sepolia")
+        for name, value in zip(
+            ("BLOCKSCOUT_API_URL", "DIAMOND_CONTRACT_ADDRESS", "MOR_TOKEN_ADDRESS"), networks[chain]
+        ):
+            if not env.get(name):
+                env[name] = value
         env.update(
             WALLET_PRIVATE_KEY=wallet,
             COOKIE_CONTENT="admin:" + password,
@@ -156,10 +214,11 @@ def create_app(supervisor=None):
             AUTH_CONFIG_FILE_PATH=str(directory / "proxy.conf"),
             RATING_CONFIG_PATH=str(directory / "rating-config.json"),
             PROXY_STORAGE_PATH=str(directory / "storage"),
+            GATEWAY_JOURNAL_PATH=str(directory / "gateway-journal"),
             PROXY_STORE_CHAT_CONTEXT="false",
             PROXY_FORWARD_CHAT_CONTEXT="false",
         )
-        for name in ("PROVIDER_ALLOW_LIST", "RATING_CONFIG_CONTENT"):
+        for name in ("PROVIDER_ALLOW_LIST", "RATING_CONFIG_CONTENT", "HELPER_TOKEN", "HELPER_TOKEN_FILE"):
             env.pop(name, None)
         supervisor = Supervisor(directory, ["/usr/local/bin/proxy-router"], env, password=password)
 
@@ -184,20 +243,109 @@ def create_app(supervisor=None):
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
+    @app.middleware("http")
+    async def boundary(request: Request, call_next):
+        if request.url.path != "/healthz" or request.method != "GET":
+            if token and not hmac.compare_digest(
+                request.headers.get("authorization", "").encode(), ("Bearer " + token).encode()
+            ):
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
+            if request.headers.get("origin"):
+                return JSONResponse({"error": "browser_access_denied"}, status_code=403)
+            body = bytearray()
+            try:
+                async with asyncio.timeout(15):
+                    async for chunk in request.stream():
+                        if len(body) + len(chunk) > 128 * 1024:
+                            return JSONResponse({"error": "request_too_large"}, status_code=413)
+                        body.extend(chunk)
+            except TimeoutError:
+                return JSONResponse({"error": "request_timeout"}, status_code=408)
+            request._body = bytes(body)
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    @app.get("/healthz")
+    async def health():
+        running = supervisor.process is not None and supervisor.process.returncode is None
+        return JSONResponse({"running": running}, status_code=200 if running else 503)
+
     @app.get("/status")
     async def status():
         return {
             "running": supervisor.process is not None and supervisor.process.returncode is None,
             "last_error": supervisor.last_error,
+            "ready": supervisor.health["ready"],
+            "rating": json.loads(supervisor.rating_path.read_text())
+            if supervisor.rating_path.exists()
+            else None,
+            "rating_hash": hashlib.sha256(supervisor.rating_path.read_bytes()).hexdigest()
+            if supervisor.rating_path.exists()
+            else None,
         }
+
+    @app.get("/journal/{operation_id}")
+    async def journal(operation_id: str):
+        import re
+
+        if not re.fullmatch(r"[a-f0-9]{32}", operation_id):
+            raise HTTPException(400, "Invalid operation ID")
+        path = supervisor.directory / "gateway-journal" / (operation_id + ".json")
+        if not path.exists():
+            raise HTTPException(404, "Operation not recorded")
+        try:
+            return json.loads(path.read_bytes())
+        except ValueError:
+            raise HTTPException(503, "Operation journal not yet readable") from None
+
+    @app.get("/operations/{operation_id}")
+    async def operation(operation_id: str):
+        import re
+
+        if not re.fullmatch(r"[a-f0-9]{32}", operation_id):
+            raise HTTPException(400, "Invalid operation ID")
+        path = supervisor.directory / ("operation-" + operation_id + ".json")
+        if not path.exists():
+            raise HTTPException(404, "Operation not recorded")
+        return json.loads(path.read_bytes())
 
     @app.post("/restart")
     async def restart(body: RestartRequest):
-        try:
-            return await supervisor.restart(body.rating.validated() if body.rating else None)
-        except Exception:
+        # Persist intent before changing files/processes. A retried operation ID
+        # returns its status, never repeats a restart.
+        path = (
+            supervisor.directory / ("operation-" + body.operation_id + ".json") if body.operation_id else None
+        )
+        fingerprint = hashlib.sha256(json.dumps(body.model_dump(), sort_keys=True).encode()).hexdigest()
+        if path and path.exists():
+            previous = json.loads(path.read_bytes())
+            if previous["fingerprint"] != fingerprint:
+                raise HTTPException(409, "Operation ID reused with different settings")
+            if previous["state"] == "succeeded":
+                return previous["result"]
             return JSONResponse(
-                {"error": "restart_failed", "message": supervisor.last_error}, status_code=503
+                {"error": "restart_already_attempted", "operation": previous}, status_code=409
             )
+        record = {"state": "running", "fingerprint": fingerprint}
+        if path:
+            atomic_write(path, json.dumps(record).encode())
+        try:
+            result = await supervisor.restart(body.rating.validated() if body.rating else None)
+            record.update(state="succeeded", result=result)
+            if path:
+                atomic_write(path, json.dumps(record).encode())
+            return result
+        except BaseException as exc:
+            record.update(
+                state="failed" if isinstance(exc, Exception) else "interrupted",
+                message=supervisor.last_error or "Restart interrupted",
+            )
+            if path:
+                atomic_write(path, json.dumps(record).encode())
+            if not isinstance(exc, Exception):
+                raise
+            return JSONResponse({"error": "restart_failed", "message": record["message"]}, status_code=503)
 
     return app

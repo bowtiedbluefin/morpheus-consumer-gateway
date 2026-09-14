@@ -20,6 +20,8 @@ async def test_real_http_adapter_paths_auth_and_no_mutation_retry(tmp_path):
     node.client = httpx.AsyncClient(
         base_url="http://node", transport=httpx.MockTransport(handle), auth=("admin", "node-password")
     )
+    await node.inference.aclose()
+    node.inference = node.client
     with pytest.raises(GatewayError):
         await node.open(BID, 600)
     assert len(requests) == 1
@@ -56,5 +58,50 @@ async def test_only_proven_pre_submission_errors_allow_provider_walk(tmp_path, m
         with pytest.raises(GatewayError) as error:
             await node.open(BID, 600)
         assert error.value.code == expected
+    finally:
+        await node.aclose()
+
+
+async def test_withdraw_and_wallet_pagination_use_native_contract(tmp_path):
+    requests = []
+
+    async def handle(req):
+        requests.append(req)
+        if req.url.path.endswith("/onhold"):
+            return httpx.Response(200, json={"available": "123", "hold": "456"})
+        if req.url.path.endswith("/withdraw"):
+            return httpx.Response(200, json={"tx": "0x" + "a" * 64})
+        return httpx.Response(200, json={"sessions": []})
+
+    node = Node(Config(data_dir=tmp_path, admin_token="x" * 32))
+    await node.client.aclose()
+    node.client = httpx.AsyncClient(base_url="http://node", transport=httpx.MockTransport(handle))
+    try:
+        assert (await node.stakes()) == {"available": "123", "hold": "456"}
+        assert requests[-1].url.params["iterations"] == "255"
+        await node.withdraw(operation_id="a" * 32)
+        assert requests[-1].headers["X-Gateway-Operation"] == "a" * 32
+        assert requests[-1].content == b'{"iterations":255}'
+        await node.wallet_sessions("0x" + "1" * 40, offset=200)
+        assert requests[-1].url.params["offset"] == "200"
+        assert requests[-1].url.params["order"] == "desc"
+    finally:
+        await node.aclose()
+
+
+async def test_model_lookup_uses_real_paginated_catalog_route(tmp_path):
+    paths = []
+
+    async def handle(req):
+        paths.append(req.url.path)
+        assert req.url.path == "/blockchain/models"
+        return httpx.Response(200, json={"models": [{"Id": MODEL, "ModelType": "LLM", "IsDeleted": False}]})
+
+    node = Node(Config(data_dir=tmp_path, admin_token="x" * 32))
+    await node.client.aclose()
+    node.client = httpx.AsyncClient(base_url="http://node", transport=httpx.MockTransport(handle))
+    try:
+        assert (await node.model(MODEL))["Id"] == MODEL
+        assert paths == ["/blockchain/models"]
     finally:
         await node.aclose()

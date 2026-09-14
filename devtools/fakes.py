@@ -22,9 +22,18 @@ class FakeNode:
         self.open_started = asyncio.Event()
         self.completions = []
         self.stream_lines = None
+        self.available = 0
+        self.hold = 0
+        self.withdrawals = 0
+        self.receipts = {}
 
     async def identity(self):
-        return {"wallet": WALLET, "chain": "84532", "version": "7.11.0"}
+        return {
+            "wallet": WALLET,
+            "chain": "84532",
+            "version": "7.11.0",
+            "capabilities": ["stake-limit-v1", "operation-journal-v1"],
+        }
 
     async def catalog(self):
         return [{"Id": MODEL, "Name": "Demo model", "ModelType": "LLM"}]
@@ -41,7 +50,7 @@ class FakeNode:
     async def bids(self, model):
         return [{"Bid": await self.bid(BID), "Score": 10.0}]
 
-    async def open(self, bid, duration):
+    async def open(self, bid, duration, max_stake=None, operation_id=None):
         self.opens += 1
         self.open_started.set()
         await asyncio.sleep(self.open_delay)
@@ -66,13 +75,33 @@ class FakeNode:
             raise GatewayError("node_rejected", "Session not found")
         return dict(self.sessions[id])
 
-    async def close_session(self, id):
+    async def close_session(self, id, operation_id=None):
         self.closes += 1
         self.sessions[id]["ClosedAt"] = int(time.time())
         return {"tx": "0x" + "5" * 64}
 
-    async def wallet_sessions(self, wallet):
-        return {"sessions": list(self.sessions.values())}
+    async def wallet_sessions(self, wallet, offset=0, limit=100):
+        return {"sessions": list(self.sessions.values())[offset : offset + limit]}
+
+    async def model(self, id):
+        return {"Id": id, "Name": "Demo model", "ModelType": "LLM"}
+
+    async def balances(self):
+        return {"mor": "125000000000000000000", "eth": "50000000000000000"}
+
+    async def stakes(self):
+        return {"available": str(self.available), "hold": str(self.hold)}
+
+    async def estimate(self, bid, duration):
+        return 5000000000000000000
+
+    async def withdraw(self, operation_id=None):
+        self.withdrawals += 1
+        self.available = 0
+        return {"tx": "0x" + "7" * 64}
+
+    async def receipt(self, tx, chain):
+        return self.receipts.get(tx)
 
     async def completion(self, session_id, model_id, body, request_id):
         self.completions.append((session_id, model_id, body, request_id))
@@ -124,11 +153,20 @@ class FakeHelper:
     def __init__(self):
         self.restarts = []
         self.fail = False
+        self.journals = {}
+        self.rating = None
 
     async def request(self, method, path, **kwargs):
-        self.restarts.append(kwargs)
+        if path == "/restart":
+            self.restarts.append(kwargs)
         if self.fail:
             raise GatewayError("helper_rejected", "Simulated restart failure")
+        if path.startswith("/journal/"):
+            return self.journals.get(path.split("/")[-1], {})
+        if path == "/status":
+            return {"ready": True, "running": True, "rating": self.rating, "rating_hash": "demo"}
+        if kwargs.get("json", {}).get("rating") is not None:
+            self.rating = kwargs["json"]["rating"]
         return {"ready": True, "rating_hash": "demo"}
 
     async def aclose(self):

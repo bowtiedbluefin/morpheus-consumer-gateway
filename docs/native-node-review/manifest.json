@@ -1,0 +1,9 @@
+{
+  "upstream_repository": "https://github.com/MorpheusAIs/Morpheus-Lumerin-Node",
+  "upstream_commit": "99a8d86af1f9453d59797f9a208aa729ff3eb00d",
+  "upstream_version": "v7.11.0",
+  "gateway_recipe_commit": "e678eeab6ecb1330342363f889c53d5d9eaed975",
+  "patch_sha256": "3235b244f5b214cf9e351efa5f8449652644f191114094ab0d688d80473fbbd7",
+  "verification": "git apply --check and apply on a clean git archive; resulting proxy-router file hashes match the patched/formatted recipe output",
+  "patch_bytes": 284689
+}

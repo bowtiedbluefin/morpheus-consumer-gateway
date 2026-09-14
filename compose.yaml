@@ -3,6 +3,10 @@ name: morpheus-consumer-gateway
 services:
   gateway:
     build: .
+    stop_grace_period: 180s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
     restart: unless-stopped
     init: true
     ports:
@@ -14,6 +18,7 @@ services:
       NODE_PASSWORD_FILE: /run/secrets/node_password
       NODE_URL: http://node:8082
       HELPER_SOCKET: /control/helper.sock
+      RPC_URL: ${ETH_NODE_ADDRESS:?Set your RPC URL in .env}
     secrets:
       - admin_token
       - node_password
@@ -34,14 +39,19 @@ services:
     build:
       context: .
       dockerfile: deploy/node.Dockerfile
-      args:
-        NODE_IMAGE: ${NODE_IMAGE:-ghcr.io/morpheusais/morpheus-lumerin-node:v7.11.0@sha256:3b2b1dea272124ce3c71ab35132f5f8a6dad54bb1e59614a50401a76c062a2b1}
+    stop_grace_period: 180s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
     restart: unless-stopped
     init: true
     environment:
       ENVIRONMENT: production
       ETH_NODE_ADDRESS: ${ETH_NODE_ADDRESS:?Set your RPC URL in .env}
       ETH_NODE_CHAIN_ID: ${ETH_NODE_CHAIN_ID:-8453}
+      DIAMOND_CONTRACT_ADDRESS: ${DIAMOND_CONTRACT_ADDRESS:-}
+      MOR_TOKEN_ADDRESS: ${MOR_TOKEN_ADDRESS:-}
+      BLOCKSCOUT_API_URL: ${BLOCKSCOUT_API_URL:-}
       WALLET_PRIVATE_KEY_FILE: /run/secrets/wallet_key
       NODE_PASSWORD_FILE: /run/secrets/node_password
       WEB_ADDRESS: 0.0.0.0:8082
@@ -64,6 +74,10 @@ services:
   ingress:
     image: caddy:2.10.2-alpine
     profiles: ["https"]
+    stop_grace_period: 180s
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
     restart: unless-stopped
     ports: ["80:80", "443:443"]
     environment:

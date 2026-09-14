@@ -4,7 +4,7 @@ Run your own Morpheus API endpoint beside your consumer node. Give an applicatio
 
 The browser dashboard has ordinary fields and buttons for model selection, session duration, provider allowlists/blocklists, rating weights, API keys, and node restarts. Nothing to install on the computer using the dashboard.
 
-**Initial release: v0.1.0.** The implementation is tested against simulated node responses and real local subprocesses. Both deployment images build. Funded, live-network integration has **not** been performed; complete the [live acceptance procedure](docs/VALIDATION.md) before relying on it for unattended use.
+**Audit fixes implemented and locally validated; production deployment acceptance remains open.** The eight findings from the September 13–14 campaign are addressed, including cold-start concurrency, session duration, error handling, recovery and native dependency remediation. Read the [remediation report](docs/REMEDIATION-REPORT.md) for passing tests, the residual non-runtime security advisory and remaining deployment checks. The [original audit](docs/PRODUCTION-READINESS-REPORT.md) preserves the initial failures.
 
 ![Dashboard running with an explicitly labeled simulated node](docs/images/dashboard.png)
 
@@ -18,8 +18,16 @@ The browser dashboard has ordinary fields and buttons for model selection, sessi
 - Edits the node's five rating weights and applies its rating JSON with a controlled local node restart.
 - Drains active requests before a normal restart, offers an explicit immediate restart, and reports operation status while the dashboard stays available.
 - Persists configuration, hashed API keys, session ownership, and uncertain operations in SQLite.
+- Cleans up dead/expired sessions, reconciles interrupted transactions, cools down failed providers, and withdraws eligible MOR after contract locks expire.
+- Exposes wallet recovery, stake/price/reserve limits, paginated history and request outcomes in the dashboard.
+
+See [recovery behavior and audit fixes](docs/RECOVERY-AND-AUDIT-FIXES.md) for defaults, guarantees and remaining limits.
 
 “Keep available” maintains an open marketplace session when capacity, funds, and providers permit. It does not reserve GPU memory, extend an existing on-chain session, or guarantee uninterrupted availability. Opening a session escrows MOR; it is not the same as buying tokens from a centralized API.
+
+## Run on Railway
+
+See [railway_setup.md](railway_setup.md) for the two-service setup, private management authentication, credential references, persistent volumes and end-to-end walkthrough. The guide records image publication status and what has actually been verified.
 
 ## Run on a Linux VM
 
@@ -70,7 +78,7 @@ curl https://YOUR-DOMAIN/v1/chat/completions \
   -d '{"model":"your-model-alias","messages":[{"role":"user","content":"Hello"}]}'
 ```
 
-Add `"stream":true` and use `curl -N` for streaming. Send the complete message history each time; node chat-context persistence and forwarding are disabled for this deployment. The first request may need provider negotiation and an on-chain transaction. Give your client a timeout that allows cold session creation (for example, five minutes). Disable client-side automatic POST retries if duplicate prompt execution matters.
+Add `"stream":true` and use `curl -N` for streaming. Send the complete message history each time; node chat-context persistence and forwarding are disabled for this deployment. The first request may need provider negotiation and an on-chain transaction. Give your client a timeout that allows cold session creation (for example, five minutes). Send an `Idempotency-Key` header to reject repeated attempts (409); responses are not stored or replayed. Allow up to six minutes for a cold request, including opening and inference.
 
 The gateway tries up to three distinct eligible providers only when the pinned node explicitly reports a failure proven to occur **before** on-chain opening. An ambiguous opening stops further opens until reconciled. It does not automatically replay a prompt or switch providers after inference begins. The upstream node has its own transport behavior.
 
@@ -106,17 +114,17 @@ Sign in using the generated `ADMIN_TOKEN` from your shell. Use a fresh temporary
 
 A dashboard restart request becomes a tracked job. The gateway stops admitting requests and waits for current requests to finish. The helper atomically writes validated rating JSON, stops its own node child, starts it, and checks the node API. If startup fails after a configuration change, it restores the previous file and attempts to restart with it. The gateway then checks wallet/network identity and reconciles its sessions before resuming admission. A drain timeout aborts the restart. Immediate restart can interrupt active requests.
 
-The node package is pinned to **v7.11.0**, and the gateway rejects other versions until the adapter is verified. Runtime Python dependencies and frontend dependencies have lockfiles. The original node MIT notice is included in the node image. API and Electron source were reviewed for orchestration patterns and behavior; their applications are not bundled or forked into this service.
+The node is built from pinned **v7.11.0** source with the reviewed stake/journal/serialization patch in `deploy/`, and the gateway rejects other versions until the adapter is verified. Runtime Python dependencies and frontend dependencies have lockfiles. The original node MIT notice is included in the node image. API and Electron source were reviewed for orchestration patterns and behavior; their applications are not bundled or forked into this service.
 
 ## Operational limits
 
 - One gateway worker and one node per installation. SQLite plus a process lock prevents two workers sharing the same data directory. Separate data directories do not coordinate the same wallet.
-- Gateway-originated lifecycle operations are serialized. The stock node's own expiry worker still operates independently; this is not a wallet-wide transaction/nonce coordinator.
-- Session-count limits are implemented. Hard monetary/stake caps and a binding quote-before-open guard are not; the stock node open-by-bid API cannot enforce the gateway's preflight quote as a transaction limit.
+- Gateway lifecycle operations and native approval/open/close/withdraw sequences are serialized. In bundled mode, the gateway owns expiry cleanup; the native expiry worker only rehydrates session state. Other machines or external wallet writers are not coordinated.
+- Per-session stake is capped by the patched node. Total managed-plus-held stake, provider price and liquid/gas reserves are checked before opening. External live sessions and actual gas costs are not covered by a wallet-wide hard cap.
 - Application keys share the installation's sessions and wallet. This is a personal/team gateway, not tenant billing isolation. Rate counters reset on gateway restart.
 - The node's private admin credential is held by the gateway. It is not exposed to the browser or application keys. The current native agent-auth mechanism is not a drop-in method-only restricted account for these operations.
 - The dashboard manages its rating file, not arbitrary host files, shell commands, wallet imports, RPC changes, or software upgrades. Edit deployment secrets/environment on the VM for initial setup.
-- `/healthz` indicates that the gateway is running. Use the authenticated dashboard for node readiness and maintenance status.
+- `/healthz` indicates that the gateway is running; `/readyz` reports observed node readiness. The authenticated dashboard shows recovery, effective configuration and maintenance status.
 
 See [operations and recovery](docs/OPERATIONS.md), [implemented scope and next work](docs/IMPLEMENTATION.md), [validation evidence](docs/VALIDATION.md), and the [full source-based design](docs/DESIGN.md).
 
