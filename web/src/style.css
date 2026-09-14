@@ -171,11 +171,10 @@ aside {
   margin-top: 5px;
 }
 .mark {
-  font-size: 34px;
-  font-weight: 800;
-  letter-spacing: -7px;
-  margin-right: 5px;
-  color: #a8dfcc;
+  display: block;
+  width: 42px;
+  height: auto;
+  flex-shrink: 0;
 }
 nav {
   display: grid;
@@ -279,18 +278,21 @@ header {
   margin-bottom: 22px;
 }
 .hero-symbol {
-  font-size: 155px;
-  line-height: 0.9;
-  font-weight: 800;
-  color: #d1e2cf;
-  letter-spacing: -15px;
-  margin: 0 40px;
+  width: 200px;
+  flex-shrink: 0;
+  text-align: center;
+  margin: 0 20px;
+}
+.hero-symbol img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .hero-symbol span {
   display: block;
   font-size: 8px;
   letter-spacing: 3px;
-  margin: 22px 0 0 5px;
+  margin-top: 22px;
   color: #89a286;
 }
 .endpoint {
@@ -571,12 +573,15 @@ tr:last-child td {
 }
 .empty-mark {
   display: inline-block;
-  font-size: 30px;
   background: #edf3e9;
-  color: #98b193;
   border-radius: 12px;
   padding: 12px 16px;
   margin-bottom: 20px;
+}
+.empty-mark img {
+  display: block;
+  width: 48px;
+  height: auto;
 }
 .secret-box {
   margin-top: 25px;
@@ -638,10 +643,18 @@ tr:last-child td {
   padding: 45px;
 }
 .login-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   letter-spacing: 3px;
   font-size: 15px;
   margin-bottom: 50px;
   color: #a6caba;
+}
+.login-brand img {
+  display: block;
+  width: 64px;
+  height: auto;
 }
 .login-card {
   width: 100%;

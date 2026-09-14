@@ -389,7 +389,10 @@ function App() {
   if (!signed)
     return (
       <main className="login">
-        <div className="login-brand">M / MORPHEUS</div>
+        <div className="login-brand">
+          <img src="/assets/brand/morpheus-mark.svg" alt="" />
+          MORPHEUS
+        </div>
         <section className="login-card">
           <span className="eyebrow">YOUR NODE. YOUR ACCESS.</span>
           <h1>
@@ -456,7 +459,7 @@ function App() {
     <div className="shell">
       <aside>
         <div className="brand">
-          <span className="mark">M</span>
+          <img className="mark" src="/assets/brand/morpheus-mark.svg" alt="" />
           <div>
             MORPHEUS<small>CONSUMER GATEWAY</small>
           </div>
@@ -585,7 +588,8 @@ function App() {
                 </div>
               </div>
               <div className="hero-symbol" aria-hidden="true">
-                M<span>CONNECTED COMPUTE</span>
+                <img src="/assets/brand/morpheus-mark.svg" alt="" />
+                <span>CONNECTED COMPUTE</span>
               </div>
             </section>
             <div className="stats">
@@ -2101,7 +2105,9 @@ function Stat({
 function Empty({ title, text }: { title: string; text: string }) {
   return (
     <section className="empty">
-      <span className="empty-mark">M</span>
+      <span className="empty-mark">
+        <img src="/assets/brand/morpheus-mark.svg" alt="" />
+      </span>
       <h3>{title}</h3>
       <p>{text}</p>
     </section>
