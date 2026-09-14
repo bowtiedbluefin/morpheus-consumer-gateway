@@ -35,3 +35,4 @@ jobs:
       - run: docker compose build
         env:
           ETH_NODE_ADDRESS: https://rpc.example.invalid
+      - run: docker build --target security -f deploy/node.Dockerfile .

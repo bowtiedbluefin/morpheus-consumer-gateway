@@ -1,5 +1,7 @@
 # Validation record
 
+> Latest checkpoint: [audit remediation](REMEDIATION-REPORT.md). The historical NO-GO below preceded the fixes.
+
 **Superseded by the [September 13–14 production-readiness campaign](PRODUCTION-READINESS-REPORT.md).** The latest decision is NO-GO despite passing regression tests. The record below describes the earlier implementation checkpoint; it does not include the subsequent funded crash/cleanup/load results or newly discovered release blockers. See the [current scenario matrix](PRODUCTION-TEST-MATRIX.md) for remaining acceptance work.
 
 Recovery update v0.2 verified September 13, 2026. The automated checks below use simulated wallets/providers. A separately authorized live opening and inference test also passed; see the live-test record below.

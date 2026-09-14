@@ -1,0 +1,318 @@
+{
+  "date_utc": "2026-09-14",
+  "branch": "fix/recovery-and-customer-reliability",
+  "parent_commit": "113c178eb554e1d73d30c3ee2f598e4b3bb3fe82",
+  "backend": {
+    "macos_passed": 153,
+    "linux_passed": 153,
+    "linux_limits": {
+      "cpus": 2,
+      "memory": "1GiB",
+      "uid": 10001,
+      "external_network": false
+    }
+  },
+  "browsers": {
+    "chromium": {
+      "startTime": "2026-09-14T02:07:13.198Z",
+      "duration": 8407.824999999999,
+      "expected": 7,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "firefox": {
+      "startTime": "2026-09-14T02:07:22.024Z",
+      "duration": 10753.395999999999,
+      "expected": 7,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "webkit": {
+      "startTime": "2026-09-14T02:07:33.144Z",
+      "duration": 11687.236,
+      "expected": 7,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "deployed_ui": {
+    "screens": [
+      {
+        "screen": "Overview",
+        "width": 390,
+        "passed": true
+      },
+      {
+        "screen": "Wallet & recovery",
+        "width": 390,
+        "passed": true
+      },
+      {
+        "screen": "Models",
+        "width": 390,
+        "passed": true
+      },
+      {
+        "screen": "Providers & rating",
+        "width": 390,
+        "passed": true
+      },
+      {
+        "screen": "Sessions",
+        "width": 390,
+        "passed": true
+      },
+      {
+        "screen": "API keys",
+        "width": 390,
+        "passed": true
+      },
+      {
+        "screen": "Node & activity",
+        "width": 390,
+        "passed": true
+      }
+    ],
+    "errors": [],
+    "expandedWidth": 390,
+    "passed": true
+  },
+  "cold_http_load": {
+    "mode": "real HTTP, simulated provider, no wallet",
+    "elapsed_seconds": 600.517318291124,
+    "requests": 35968,
+    "status_counts": {
+      "404": 5397,
+      "401": 1799,
+      "200": 28772
+    },
+    "incorrect": 0,
+    "final_metrics": {
+      "calls": 28772,
+      "opens": 8,
+      "peak": 8,
+      "duplicate_leases": 0,
+      "active": 0,
+      "waiting": 0,
+      "events": 500
+    },
+    "passed": true
+  },
+  "funded_checks": [
+    {
+      "test": "invalid_input_before_escrow",
+      "passed": true,
+      "nan_status": 400,
+      "wrong_model_status": 404
+    },
+    {
+      "test": "four_cold_requests",
+      "passed": true,
+      "peak_active": 2,
+      "replies": [
+        {
+          "index": 0,
+          "status": 200,
+          "seconds": 20.73555616592057,
+          "marker_present": true
+        },
+        {
+          "index": 1,
+          "status": 200,
+          "seconds": 12.59763520793058,
+          "marker_present": true
+        },
+        {
+          "index": 2,
+          "status": 200,
+          "seconds": 21.943252665922046,
+          "marker_present": true
+        },
+        {
+          "index": 3,
+          "status": 200,
+          "seconds": 20.41943179187365,
+          "marker_present": true
+        }
+      ]
+    },
+    {
+      "test": "minimum_300_seconds_on_chain",
+      "passed": true,
+      "sessions": [
+        {
+          "chain_id": "0x3c2aa13a4365bd18847a508a3c203a92525801eeedb680a6bd54562977ecf56b",
+          "duration": 300,
+          "stake_wei": "446609540066177399"
+        },
+        {
+          "chain_id": "0x0bd6f44edd3ff307bf8e74c60d116c6b752a96ae7aab1b41235d7494c574ea76",
+          "duration": 300,
+          "stake_wei": "446609540066177399"
+        }
+      ]
+    },
+    {
+      "test": "real_stream",
+      "passed": true,
+      "status": 200
+    }
+  ],
+  "cleanup": {
+    "passed": true,
+    "initial_close_attempt_status": 503,
+    "recovery": "Same-ID close confirmed; durable close intent regression added afterward"
+  },
+  "funded_sessions": [
+    {
+      "chain_id": "0x3c2aa13a4365bd18847a508a3c203a92525801eeedb680a6bd54562977ecf56b",
+      "provider": "0x23da7e8ce578bfead351caff6b0f4e976ea99676",
+      "state": "closed",
+      "opened_at": 1789350555,
+      "ends_at": 1789350855,
+      "closed_at": 1789350565,
+      "stake_wei": "446609540066177399",
+      "transactions": [
+        {
+          "kind": "approval",
+          "hash": "0x78c19e6479c1db2f0d1fba705da771764adf176b58cf9c109d5d9be35cd5729b"
+        },
+        {
+          "kind": "open",
+          "hash": "0xd57b563424a9af9c9d68ec9a58f89f234136dc99ca49895eec0182482ab91c9a"
+        }
+      ],
+      "close_tx": "0x1852376b063ebe26df1885615cc9c8f0cf78b5efb38bd3b08f0560214f5a20b4"
+    },
+    {
+      "chain_id": "0x0bd6f44edd3ff307bf8e74c60d116c6b752a96ae7aab1b41235d7494c574ea76",
+      "provider": "0xbe7462798fc20affa0982d27af1eebef9c270611",
+      "state": "closed",
+      "opened_at": 1789350547,
+      "ends_at": 1789350847,
+      "closed_at": 1789350711,
+      "stake_wei": "446609540066177399",
+      "transactions": [
+        {
+          "kind": "approval",
+          "hash": "0x13f177eaa096457c965c9829392ebca9307669b3cf62a8f75a29ca7c4ced996b"
+        },
+        {
+          "kind": "open",
+          "hash": "0x07f76c6312242bd6168ef1307a71dd9187984eb55364a5e4c35b836bf2eb006d"
+        }
+      ],
+      "close_tx": "0x4f0490a86cf818d76a9242c00af233ccdb4de0b3be82525f8511465f972a472a"
+    }
+  ],
+  "wallet_accounting": {
+    "passed": true,
+    "verified_at": 1789351402.997366,
+    "initial": {
+      "mor": "20500000000000000000",
+      "eth": "2434209436498352"
+    },
+    "final": {
+      "eth": "2422915720724343",
+      "mor": "20240992326560259772"
+    },
+    "final_rpc_block": "0x30e7c83",
+    "held": {
+      "available": "0",
+      "hold": "259007673439740228"
+    },
+    "fees_wei": "11293715774009",
+    "confirmed_transaction_count": 6,
+    "health": {
+      "/healthz": 200,
+      "/readyz": 200
+    },
+    "live_sessions": 0,
+    "active_requests": 0,
+    "queued": 0
+  },
+  "native_security": {
+    "source_called": 0,
+    "source_imported_package": 0,
+    "source_required_module": 1,
+    "binary_advisories": [
+      "GO-2026-5932"
+    ],
+    "disposition": "OpenPGP absent from runtime package closure; dependency test path retained and closure checked during build",
+    "go": "1.26.8",
+    "upstream_commit": "99a8d86af1f9453d59797f9a208aa729ff3eb00d",
+    "deployed_binary_sha256": "6ee891270911d3268905c37b17ec7fc77671297fddff6613f0dacd7610e4e708"
+  },
+  "native_tests": {
+    "gateway_tests_passed": 7,
+    "attestation_passed": 77,
+    "attestation_upstream_skipped": 6,
+    "attestation_missing_fixture_tests_excluded": 10
+  },
+  "deployed_images": [
+    "/morpheus-consumer-gateway-gateway-1 sha256:c0a32bf386431ba75fc6b91d28e674011f24f6ea1c3d0badfe63e5a4125ee039 running",
+    "/morpheus-consumer-gateway-node-1 sha256:fbc56a1abb4a1d669b6d5d743d22896d2ad1fd8f89e07e0825e43fedcccb656b running"
+  ],
+  "limits": [
+    "No final-build full funded crash/orphan/SDK rerun",
+    "No public target VM/domain acceptance",
+    "No 24-48h real-provider soak",
+    "New held MOR not yet eligible for withdrawal",
+    "Missing upstream attestation fixtures",
+    "No successful simultaneous two-distinct-model canary"
+  ],
+  "artifact_sha256": {
+    "data/remediation/accounting-console.log": "7aed59abe782f2a075da6b28b07c2e693f9021370aabfcddbb114716c52f582f",
+    "data/remediation/backend-junit.xml": "52944d77c471177e7d2ae02078bc4be9777130b603a2dc158bfd3c5189112957",
+    "data/remediation/backend.log": "1172163cfdfec31dffcd5d655c0dbaea51df3611443276f30c1779e21698485c",
+    "data/remediation/browser-chromium.json": "697aaa5ed773742f02eb7bbe5d272b973f2e248a124e9a682ff55b3bf59899f1",
+    "data/remediation/browser-chromium.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "data/remediation/browser-firefox.json": "8ba3aa68c4f5c82ab7ef80518c81e009d02f5011cb194484398ab11366d8cc52",
+    "data/remediation/browser-firefox.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "data/remediation/browser-webkit.json": "e5d4ddc1129d79e3dd34a2398c78c4283d0d6f757f4ad9cf66447587ac30c367",
+    "data/remediation/browser-webkit.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "data/remediation/cold-soak-console.log": "051afc6828834abd9803737bda052238076ffcc5aa0f676c4ee400b9e0e368d0",
+    "data/remediation/cold-soak.json": "18f34ef26686738f2ccfb716b58bac52a97b85cb63d36c034f48756597c9db5b",
+    "data/remediation/cold-soak.log": "6aaa75df3085d73e976794deae4c2e42a62e6dbe36ffeedb0a196d1a35ab21d4",
+    "data/remediation/deployed-images.txt": "ca8b59f25f24e73cc5be666f35eaef095ab3eba127acd4d4f8a445d5d1f68c3e",
+    "data/remediation/deployed-mobile.png": "c5a884c31a280accd6ed9407ff75dd846a840c910903cfbf03845b36572f92d0",
+    "data/remediation/deployed-native-binary-security.txt": "fbc6c4e021d9e492bbbd5f3c06f9894427d9b8bf8bd16929c65abd5bf2a2620d",
+    "data/remediation/deployed-ui.json": "8833a437b9d8d05219d72aac6e76969801839cd5e721eb930372daf934ee1bc9",
+    "data/remediation/docker-build.log": "0c5247a2a8b526e9d5e02a3a5f33c7b15a612a24cc79344c23f1be1fd911a12b",
+    "data/remediation/docker-security.log": "8a85b7c5e539f2f0033baccb1391bed1256b3671bae5b84ce01cfab82ce6c0c5",
+    "data/remediation/final-build.log": "72aac04341e34f4d79073e54f594bfbbb0a24ff1671a65b1440c9f7d98959705",
+    "data/remediation/final-deploy.log": "5749420e5ccd8b489ef4abbec55231eec83b8bdb84a2d0774d25ed8de4b86203",
+    "data/remediation/final-operations.json": "bb12b5737276735724b94433f88f00ca8f20f04d54fafd1585d353bea0836d51",
+    "data/remediation/final-policy.json": "de327973503ff0ea38667fee3986caf55461977de44cafa6a412d53fef61e030",
+    "data/remediation/final-sessions.json": "57538bf52c22bae8383540c4708f2db561499687c50cac5ea7711ccead2f1a1d",
+    "data/remediation/final-status.json": "a9fd09b8b9e011a1c9e3c92001a457568d21eb9447db0691fd2f6036befcdae5",
+    "data/remediation/linux-backend.log": "6bdd79aae768a9e4a645aadebf2231804497f0f77c29097a6d4bc48022021d52",
+    "data/remediation/live-baseline.json": "26de80a79ec5d92300452a5f4de7b590ae7e901c4fa777048a2a7fb175387b6f",
+    "data/remediation/live-concurrent-0.json": "8288d20d9f9affde53e549a14dc33ea0f8c84471ab4547bd949e17252e424c2f",
+    "data/remediation/live-concurrent-1.json": "9c35141fc424ecfd05010d72d0ab7ef8e3011b2482a49b1d3243924ee6419f0f",
+    "data/remediation/live-concurrent-2.json": "e5496287da5d13e4154b02755d67b2583e3e7c70f045525cea73dcbd155f95f7",
+    "data/remediation/live-concurrent-3.json": "cb0ef703b3c87505f603d4d6f7de6a9e2379e333281c7b86014070a94cd7c3de",
+    "data/remediation/live-console.log": "4d810458805560ae3d7796892af34a4e538c43326e621780511a444bf91c795e",
+    "data/remediation/live-diagnostic-keys.json": "430086daad63ecbe8d8b23d1bcfde1721c053d681e8e3f4e80741feb38248e9b",
+    "data/remediation/live-diagnostic-policy.json": "de327973503ff0ea38667fee3986caf55461977de44cafa6a412d53fef61e030",
+    "data/remediation/live-diagnostic-sessions.json": "a56117047e87743b8cb7f8a59357e5ba7953aeed1b68c36fde03018ee9bea0ef",
+    "data/remediation/live-diagnostic-status.json": "76936f19c05746d05720a949f3d328a3c333bff7a22ca1b541517d8776bbcb70",
+    "data/remediation/live-final-sessions.json": "a7be8099f86c4dc115d3cf5c833ab77fb5a892f2cb01f6aae1c1f14273ded50e",
+    "data/remediation/live-final-status.json": "ea9eca7534aed35761c8b2e975f6d009c2a0cd1de18f11618cb84e0c4b077ba0",
+    "data/remediation/live-results.json": "894db38664b73f3ac40c80c4877f826145ef0696c5e55e355edcb18bafa4a0c0",
+    "data/remediation/native-attestation-tests.jsonl": "21553a1c8e1bad9fffc9bdf6199f8a7e28cec07268e480f4c2ef4b967b29f1c5",
+    "data/remediation/native-binary-security.txt": "fbc6c4e021d9e492bbbd5f3c06f9894427d9b8bf8bd16929c65abd5bf2a2620d",
+    "data/remediation/native-core-tests.log": "90e08c2fce0c51a6bb2e5c903e421ad8c329af8e87990100e5894dbdb4b1962e",
+    "data/remediation/native-runtime-packages.txt": "64444e9f0edd9ad91de07c065d3480fa1166ce4dcf4fad51f4107e265105af46",
+    "data/remediation/native-source-security.txt": "b5ae54ddcfa4cb39e85f84ad2d9e43556bd817c480eaab2a71bab63bfc29353b",
+    "data/remediation/openpgp-reachability.txt": "f7c925e0638da7b81a0f41f1b92684b0adb7e30e827241f3cb49b76610c32ab2",
+    "data/remediation/predeploy.json": "417fc50e4a10479a23bd16ea4ae461510c089e443494537520b1977bda160f40",
+    "data/remediation/rpc-final-params.json": "731d0d8943774d53daea9482298ef5460b3dac85ae0760490bd37c69ef04620b",
+    "data/remediation/transaction-hashes.json": "c0335c339c055898ee813fc3072f2dc53aea7b85d95981b022a8c72d498d7c03",
+    "data/remediation/transaction-receipts.json": "e990e3c2d95d56912bdeb969aa7454f4a4b383ae1ce63fff7bb7a10b594dd310",
+    "data/remediation/wallet-accounting.json": "103a35a400d75fe18e811d15dfc3e8c210890c5d1756484519a427e9247ebf68"
+  }
+}

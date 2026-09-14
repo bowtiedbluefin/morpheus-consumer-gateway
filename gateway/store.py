@@ -96,6 +96,12 @@ class Store:
     def policy(self) -> Policy:
         return Policy.model_validate(self.get("settings", "policy"))
 
+    def probe_writable(self):
+        probe = {"nonce": uuid.uuid4().hex}
+        self.put("settings", "storage_health", probe)
+        if self.get("settings", "storage_health") != probe:
+            raise sqlite3.DatabaseError("Storage health verification failed")
+
     def event(self, action: str, **fields):
         # Optional diagnostics must never prevent releasing a lease or completing a mutation.
         id = uuid.uuid4().hex

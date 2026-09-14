@@ -1,0 +1,8 @@
+# golang.org/x/crypto/openpgp
+github.com/MorpheusAIs/Morpheus-Lumerin-Node/proxy-router/internal/attestation
+github.com/sigstore/sigstore-go/pkg/bundle
+github.com/sigstore/sigstore-go/pkg/tlog
+github.com/sigstore/rekor/pkg/types/dsse/v0.0.1
+github.com/sigstore/rekor/pkg/types/dsse/v0.0.1.test
+github.com/sigstore/rekor/pkg/util/e2eutil
+golang.org/x/crypto/openpgp

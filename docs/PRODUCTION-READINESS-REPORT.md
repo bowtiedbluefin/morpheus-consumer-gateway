@@ -1,5 +1,7 @@
 # Production-readiness test report
 
+> Historical campaign record. The eight identified findings have since been addressed; see the [remediation report](REMEDIATION-REPORT.md) for current results and remaining acceptance work.
+
 **Decision: NO-GO for production.** Real inference and important recovery paths work, but the test campaign found an availability hang and several customer-facing failures that the previous tests missed. The green regression results below do not override those failures.
 
 Companion artifacts: [scenario coverage and remaining acceptance checks](PRODUCTION-TEST-MATRIX.md), [funded session ledger](PRODUCTION-SESSION-LEDGER.md), [native dependency triage](NATIVE-DEPENDENCY-TRIAGE.md), and [machine-readable evidence](PRODUCTION-TEST-EVIDENCE.json).
@@ -118,7 +120,7 @@ Source evidence: upstream `SessionStorage.sol` defines a five-minute minimum; `S
 
 **Observed:** On the actual deployment and a deterministic browser reproduction, a 390 px viewport grew to 656 px. Long MOR/ETH values force the two-column statistics grid beyond the screen. The existing demo screenshot test had short values and passed.
 
-**Fix/acceptance:** Use a compact human-readable display with exact values available separately, and constrain/wrap the grid cells. Check all screens at phone/tablet widths with large values, long aliases, addresses and errors. Reproduction: `web/production-audit/mobile.spec.ts`.
+**Fix/acceptance:** Use a compact human-readable display with exact values available separately, and constrain/wrap the grid cells. Check all screens at phone/tablet widths with large values, long aliases, addresses and errors. Reproduction: `web/e2e/mobile.spec.ts`.
 
 ### PR-08 — Native dependency advisories require remediation and reachability review — high
 
@@ -205,7 +207,7 @@ The [sanitized evidence JSON](PRODUCTION-TEST-EVIDENCE.json) records test cases,
 
 ## Reproduction and evidence map
 
-See [campaign instructions](../audits/production_readiness/README.md), [regression tests](../tests/), [failing release gates](../audits/production_readiness/test_release_gates.py), [browser failure](../web/production-audit/mobile.spec.ts), and [soak runner](../devtools/soak.py).
+See [campaign instructions](../audits/production_readiness/README.md), [regression tests](../tests/), [failing release gates](../tests/test_release_regressions.py), [browser failure](../web/e2e/mobile.spec.ts), and [soak runner](../devtools/soak.py).
 
 The regression/test commit `209d806fcde80d2763a407f3d8e2162e7b9c3232` passed [GitHub CI](https://github.com/bowtiedbluefin/morpheus-consumer-gateway/actions/runs/34789698044): backend tests, lint/format, frontend build, Chromium regressions, and both Docker image builds. CI currently excludes the separate failing acceptance gates; Firefox/WebKit, funded tests, and the sustained load test were run locally.
 

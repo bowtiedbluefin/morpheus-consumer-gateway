@@ -1,5 +1,7 @@
 # Customer scenario coverage and release acceptance
 
+> Historical campaign record. The eight identified findings have since been addressed; see the [remediation report](REMEDIATION-REPORT.md) for current results and remaining acceptance work.
+
 Read this with the [actual results report](PRODUCTION-READINESS-REPORT.md). “Controlled” means an automated fixture or fault injection, not a funded production-network observation. Passing one layer does not imply another passed. The final release must be tested against the same application, node binary, database schema and deployment configuration that will ship.
 
 ## Implemented and exercised

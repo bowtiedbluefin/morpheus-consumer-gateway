@@ -198,6 +198,75 @@ class Sessions:
 
         self.spawn(run())
 
+    def opening_error(self, model_id):
+        row = self.store.get("opening_failure", model_id)
+        if row and row["revision"] == self.store.policy().revision and row["retry_at"] > time.time():
+            return GatewayError(row["code"], row["message"], row["status"], outcome=row["outcome"])
+
+    def start_open(self, model_id):
+        revision = self.store.policy().revision
+
+        async def run():
+            try:
+                row = await self._open(model_id)
+            except GatewayError as exc:
+                if (
+                    exc.code
+                    not in (
+                        "session_duration_invalid",
+                        "open_preflight_failed",
+                        "provider_declined",
+                        "no_eligible_provider",
+                    )
+                    or exc.outcome != "not_submitted"
+                ):
+                    raise
+                previous = self.store.get("opening_failure", model_id) or {}
+                if previous.get("revision") != revision:
+                    previous = {}
+                failures = min(previous.get("failures", 0) + 1, 8)
+                self.store.put(
+                    "opening_failure",
+                    model_id,
+                    {
+                        "revision": revision,
+                        "failures": failures,
+                        "retry_at": time.time() + min(300, 5 * 2**failures),
+                        "code": exc.code,
+                        "message": exc.message,
+                        "status": exc.status,
+                        "outcome": exc.outcome,
+                    },
+                )
+                raise
+            self.store.delete("opening_failure", model_id)
+            return row
+
+        task = self.spawn(run())
+        self.opening[model_id] = task
+
+        def finished(completed):
+            # An earlier callback must never remove a newer opener.
+            if self.opening.get(model_id) is completed:
+                self.opening.pop(model_id)
+
+        task.add_done_callback(finished)
+        return task
+
+    def can_wait_for_hot(self, model_id, error):
+        return (
+            error.outcome == "not_submitted"
+            and error.code
+            in ("provider_declined", "no_eligible_provider", "wallet_budget", "open_preflight_failed")
+            and any(
+                row["model"] == model_id
+                and row["state"] == "open"
+                and self.store.policy().providers.permits(row["provider"])
+                and row["ends_at"] > time.time() + self.cfg.request_timeout + 15
+                for row in self.store.sessions()
+            )
+        )
+
     async def acquire(self, model_id, prewarm=False):
         if self.store.policy().paused or self.maintenance:
             raise GatewayError("paused", "Gateway is paused or draining for a node restart")
@@ -205,6 +274,7 @@ class Sessions:
             raise GatewayError("queue_full", "Request queue is full", 429)
         self.waiting += 1
         deadline = time.monotonic() + self.store.policy().queue_seconds
+        opening_deadline = time.monotonic() + self.cfg.acquisition_timeout
         try:
             while True:
                 if self.maintenance or self.store.policy().paused:
@@ -273,24 +343,36 @@ class Sessions:
                         "open_unknown", "An opening outcome needs reconciliation before new sessions can open"
                     )
                 task = self.opening.get(model.id)
+                error = self.opening_error(model.id)
+                if error and not task and not self.can_wait_for_hot(model.id, error):
+                    raise error
                 if (
                     not task
+                    and not error
+                    and time.monotonic() < deadline
                     and len(rows) < self.store.policy().max_sessions
                     and sum(r["model"] == model.id for r in rows) < model.max_sessions
                 ):
-                    task = self.spawn(self._open(model.id))
-                    self.opening[model.id] = task
-                    task.add_done_callback(lambda t, mid=model.id: self.opening.pop(mid, None))
+                    task = self.start_open(model.id)
                 if task:
                     try:
-                        await asyncio.wait_for(asyncio.shield(task), self.cfg.acquisition_timeout)
+                        await asyncio.wait_for(
+                            asyncio.shield(task), max(0, opening_deadline - time.monotonic())
+                        )
                     except TimeoutError:
                         raise GatewayError(
                             "opening_pending",
                             "Opening is still running; inspect Sessions before retrying",
                             503,
                         ) from None
+                    except GatewayError as exc:
+                        if not self.can_wait_for_hot(model.id, exc):
+                            raise
+                    finally:
+                        if task.done() and self.opening.get(model.id) is task:
+                            self.opening.pop(model.id)
                     # The opener does not lease. Competing callers reserve through the hot path.
+                    await asyncio.sleep(0)
                     continue
                 if time.monotonic() >= deadline:
                     raise GatewayError("pool_busy", "Session pool is busy; retry later", 429)
@@ -356,6 +438,7 @@ class Sessions:
                     raise GatewayError(
                         "no_eligible_provider",
                         "No rated provider is permitted, affordable and outside cooldown",
+                        outcome="not_submitted",
                     )
                 selected = options[0]
                 if not HASH.fullmatch(str(selected["id"])):
@@ -571,6 +654,13 @@ class Sessions:
         self.store.event("session_closed", session=row["id"], tx=row.get("close_tx"))
 
     async def close(self, id, stop_maintaining=False):
+        row = self.store.get("session", id)
+        if not row:
+            raise GatewayError("not_found", "Session not found", 404)
+        if row["state"] in ("open", "quarantined", "orphaned"):
+            # Retain the user's close intent even if identity/RPC reads fail.
+            row.update(state="draining", close_reason="Close requested")
+            self.store.put("session", id, row)
         if stop_maintaining:
             row = self.store.get("session", id)
             policy = self.store.policy()
@@ -582,7 +672,12 @@ class Sessions:
         async with self.lock:
             if self.maintenance:
                 raise GatewayError("paused", "Cleanup waits until the node restart finishes")
-            await self.verify_identity()
+            try:
+                await self.verify_identity()
+            except GatewayError as exc:
+                row = self.store.get("session", id)
+                self.mark_error(row, exc)
+                raise
             row = self.store.get("session", id)
             if not row:
                 raise GatewayError("not_found", "Session not found", 404)
@@ -915,6 +1010,8 @@ class Sessions:
     async def tick(self):
         if self.maintenance:
             return
+        if self.store.error:
+            self.store.probe_writable()
         await self.verify_identity()
         await self.node.balances()
         await self.reconcile()
@@ -950,15 +1047,14 @@ class Sessions:
                     and model.retention == "maintain"
                     and (not model.warm_until or time.time() < model.warm_until)
                     and model.id not in self.opening
+                    and not self.opening_error(model.id)
                 ):
                     # Never hold up another model's maintenance; per-model task deduplication.
                     if not any(
                         r["model"] == model.id and r["state"] == "open" and r["id"] not in self.active
                         for r in self.store.sessions()
                     ):
-                        task = self.spawn(self._open(model.id))
-                        self.opening[model.id] = task
-                        task.add_done_callback(lambda t, mid=model.id: self.opening.pop(mid, None))
+                        self.start_open(model.id)
                     else:
                         for row in self.store.sessions():
                             if (
@@ -975,6 +1071,9 @@ class Sessions:
             and (not self.sweep_task or self.sweep_task.done())
         ):
             self.sweep_task = self.spawn(self.sweep())
+        if self.store.error:
+            self.store.probe_writable()
+            self.store.error = None
 
     async def run(self):
         await self.recover()

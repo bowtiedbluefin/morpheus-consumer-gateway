@@ -1,5 +1,7 @@
 # Native dependency call-graph triage
 
+> Historical campaign record. The eight identified findings have since been addressed; see the [remediation report](REMEDIATION-REPORT.md) for current results and remaining acceptance work.
+
 The actual deployed binary produced 53 symbol-level advisory matches in 18 modules. A separate source scan of the patched upstream checkout, using the `docker` build tag, Linux/ARM64 and Go 1.25.14, completed with **32 advisory matches in 19 modules**. It also reported 24 imported-package and 17 required-module advisories without an apparent call path. These are separate analyses, not additive vulnerability counts.
 
 Static call paths are conservative: several pass through initialization, formatting interfaces or generic synchronization callbacks. They do not establish that an unauthenticated customer can trigger the vulnerable behavior in this configuration. Conversely, a missing static path is not proof of safety. Remediation needs dependency upgrades/removal and feature-specific reachability review. `N/A` means the scan did not provide a fixed version; it does not mean no remediation exists. See [govulncheck limitations](https://pkg.go.dev/golang.org/x/vuln/cmd/govulncheck).

@@ -2083,7 +2083,17 @@ function Stat({
   return (
     <section className="stat">
       <span>{label}</span>
-      <strong>{value}</strong>
+      <strong title={value}>
+        {/^\d+\.\d{7,}$/.test(value)
+          ? value.replace(/(\.\d{6})\d+$/, "$1") + "…"
+          : value}
+      </strong>
+      {/^\d+\.\d{7,}$/.test(value) && (
+        <details className="exact-balance">
+          <summary>Exact amount</summary>
+          <code>{value}</code>
+        </details>
+      )}
       <small>{foot}</small>
     </section>
   );

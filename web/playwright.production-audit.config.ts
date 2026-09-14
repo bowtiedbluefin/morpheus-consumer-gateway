@@ -1,3 +1,7 @@
 import { defineConfig } from "@playwright/test";
 import base from "./playwright.config";
-export default defineConfig({ ...base, testDir: "./production-audit" });
+export default defineConfig({
+  testMatch: "mobile.spec.ts",
+  ...base,
+  testDir: "./e2e",
+});

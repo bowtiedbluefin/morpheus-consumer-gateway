@@ -21,7 +21,7 @@ from .models import KeyCreate, Policy, Restart, StrictModel
 from .node import GatewayError, Helper, Node
 from .sessions import Sessions
 from .store import Store
-from .transport import ChatRequest, bounded_body, chat_events, validate_completion
+from .transport import ChatRequest, bounded_body, chat_events, strict_json, validate_completion
 
 
 def digest(value: str) -> str:
@@ -448,8 +448,8 @@ def create_app(cfg: Config | None = None, node=None, helper=None):
     @app.post("/v1/chat/completions")
     async def completion(request: Request, key=Depends(api_key)):
         try:
-            body = await request.json()
-        except ValueError:
+            body = strict_json(await request.body())
+        except (ValueError, UnicodeError, RecursionError):
             raise GatewayError("invalid_request", "Request must be JSON", 400) from None
         if (
             not isinstance(body, dict)
@@ -608,12 +608,13 @@ def create_app(cfg: Config | None = None, node=None, helper=None):
             async with asyncio.timeout(max(0, inference_deadline - time.monotonic())):
                 raw = await bounded_body(upstream, cfg.response_bytes)
             try:
-                result = validate_completion(json.loads(raw))
-            except (ValueError, UnicodeError):
+                result = validate_completion(strict_json(raw))
+            except (ValueError, UnicodeError, RecursionError):
                 raise GatewayError("provider_protocol", "Provider returned invalid JSON", 502) from None
+            response = JSONResponse(result, headers={"X-Request-ID": request_id})
             outcome = "succeeded"
             await cleanup()
-            return JSONResponse(result, headers={"X-Request-ID": request_id})
+            return response
         except GatewayError as exc:
             failure_code = exc.code
             if row and exc.code in (

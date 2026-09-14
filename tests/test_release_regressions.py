@@ -1,8 +1,4 @@
-"""Desired production behavior. Run separately to reproduce unresolved release gates.
-
-These tests intentionally retain failing assertions; failures are not retries or
-expected-failure marks hidden inside the green regression suite.
-"""
+"""Regression coverage for the production acceptance findings."""
 
 import asyncio
 import json

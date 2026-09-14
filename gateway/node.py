@@ -88,6 +88,17 @@ class Node:
                     else "unknown"
                 )
                 if opening and isinstance(message, str):
+                    if (
+                        "SessionTooShort" in message
+                        or "gateway session duration below contract minimum" in message
+                    ):
+                        raise GatewayError(
+                            "session_duration_invalid",
+                            "The contract rejected the session duration; check the network minimum and refresh the stake quote",
+                            400,
+                            outcome=outcome,
+                            transactions=transactions,
+                        )
                     if message.startswith(
                         (
                             "provider healthcheck ping failed",
@@ -100,6 +111,7 @@ class Node:
                             "provider_declined",
                             "Provider declined or failed verification before submission",
                             outcome="not_submitted",
+                            transactions=transactions,
                         )
                     if message.startswith(
                         (
@@ -119,6 +131,7 @@ class Node:
                             "Opening preflight failed; check RPC, bid and configured stake limit",
                             503,
                             outcome="not_submitted",
+                            transactions=transactions,
                         )
                 if (
                     method == "POST"
@@ -286,7 +299,9 @@ class Node:
             raise GatewayError(
                 "budget_unavailable", "Network emissions budget is unavailable", outcome="not_submitted"
             )
-        return int(supply) * int(amount(bid.get("PricePerSecond"))) * duration // int(budget)
+        numerator = int(supply) * int(amount(bid.get("PricePerSecond"))) * duration * 10001
+        denominator = int(budget) * 10000
+        return (numerator + denominator - 1) // denominator
 
     async def rpc_call(self, method, params):
         if not self.cfg.rpc_url:

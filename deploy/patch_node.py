@@ -15,8 +15,32 @@ def replace(file, old, new, count=1):
     p.write_text(text.replace(old, new))
 
 
-for name in ("gateway_progress.go", "gateway_progress_test.go"):
+for name in ("gateway_progress.go", "gateway_progress_test.go", "gateway_stake.go", "gateway_stake_test.go"):
     shutil.copy(Path(__file__).parent / "native" / name, root / "internal/lib" / name)
+replace(
+    "internal/repositories/wallet/hdwallet.go",
+    '"github.com/btcsuite/btcutil/hdkeychain"',
+    '"github.com/btcsuite/btcd/btcutil/hdkeychain"',
+)
+replace(
+    "internal/blockchainapi/service.go",
+    "stake := new(big.Int).Div(new(big.Int).Mul(supply, sessionCost), budget)\n\treturn stake, nil",
+    "return lib.GatewaySessionStake(&bid.PricePerSecond.Int, duration, supply, budget)",
+)
+# Do not use a cached emissions quote to fund a newly negotiated session.
+replace(
+    "internal/blockchainapi/service.go",
+    "\tamountTransferred, err := computeSessionTokenAmount(bid, duration, supply, budget, directPayment)",
+    """\tif !directPayment {
+      timestamp := big.NewInt(time.Now().Unix())
+      var refreshErr error
+      supply, refreshErr = s.sessionRouter.GetTotalMORSupply(ctx, timestamp)
+      if refreshErr != nil { return common.Hash{}, false, fmt.Errorf("failed to parse token supply: %w", refreshErr) }
+      budget, refreshErr = s.sessionRouter.GetTodaysBudget(ctx, timestamp)
+      if refreshErr != nil { return common.Hash{}, false, fmt.Errorf("failed to parse token budget: %w", refreshErr) }
+    }
+    amountTransferred, err := computeSessionTokenAmount(bid, duration, supply, budget, directPayment)""",
+)
 replace(
     "internal/blockchainapi/structs/req.go",
     "type OpenSessionWithDurationRequest struct {",

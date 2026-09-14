@@ -1,6 +1,6 @@
 # Production acceptance campaign
 
-Read [the report](../../docs/PRODUCTION-READINESS-REPORT.md) before using these tools. Passing the regular regression suite does **not** clear the separately reproduced release blockers.
+Read the [remediation report](../../docs/REMEDIATION-REPORT.md) for the latest results and the [original audit](../../docs/PRODUCTION-READINESS-REPORT.md) for historical failures. The release regressions and mobile case now pass and run in the regular suite.
 
 ## Reproducible wallet-free checks
 
@@ -8,12 +8,12 @@ From the repository root:
 
 ```sh
 .venv/bin/python -m pytest -q
-.venv/bin/python -m pytest audits/production_readiness/test_release_gates.py -q
+.venv/bin/python -m pytest tests/test_release_regressions.py -q
 .venv/bin/python -m devtools.soak --seconds 120 --output data/cold-soak.json
 .venv/bin/python -m devtools.soak --warm --seconds 3600 --rps 60 --output data/warm-soak.json
 ```
 
-The second command intentionally fails while the documented defects remain. It is excluded from the normal green regression suite; it must pass before declaring those release gates fixed. The cold soak currently reproduces an acquisition hang; the runner bounds client waits and terminates its disposable service. `--warm` seeds eight fake sessions and measures steady-state behavior only. It must not be used to claim that cold starts passed. `SOAK_DEBUG=1` adds a diagnostic policy-read limit that changes failure behavior; diagnostic runs are not performance measurements.
+The second command runs the promoted acceptance regressions. The cold soak now passes with an initially empty pool; the runner bounds client waits and terminates its disposable service. `--warm` seeds eight fake sessions and measures steady-state behavior only. It must not be used to claim that cold starts passed. `SOAK_DEBUG=1` adds a diagnostic policy-read limit that changes failure behavior; diagnostic runs are not performance measurements.
 
 Browser regressions use a fresh demo database for each invocation:
 
@@ -25,7 +25,7 @@ TEST_BROWSER=webkit npm test
 npx playwright test -c playwright.production-audit.config.ts
 ```
 
-Install the corresponding browser binaries with `npx playwright install chromium firefox webkit`. The last command reproduces the mobile overflow and currently fails. Failure traces contain dummy credentials only; do not enable traces on a funded deployment.
+Install the corresponding browser binaries with `npx playwright install chromium firefox webkit`. The last command runs the repaired mobile regression, also included in the normal browser suite. Failure traces contain dummy credentials only; do not enable traces on a funded deployment.
 
 ## Funded campaign reproductions
 
@@ -35,6 +35,7 @@ Every script requires `--allow-wallet-transactions`; interruption scenarios addi
 
 | Script | Scenario / prerequisite |
 | --- | --- |
+| `remediation.py` | Standalone repaired-gate campaign: invalid requests, four cold prompts, two 300-second sessions and streaming; restores policy, closes owned sessions, revokes its key. Requires no live sessions at start. |
 | `core.py` | Invalid requests, authorization, four cold concurrent requests, streaming, request idempotency; prepares test key and bounded campaign policy. |
 | `concurrency.py` | Four long requests with all providers allowed; expects `core.py` preparation. Content markers alone are not a reliable routing oracle for a reasoning model with a token limit. |
 | `lifecycle.py` | Stream disconnect, graceful restart, rating application, post-restart inference, repeated close. A `close_pending` response requires later chain reconciliation. |
@@ -57,3 +58,5 @@ Do not clear unknown operations, delete wallet journals, or delete funded volume
 ## Evidence
 
 Raw campaign artifacts are in ignored `data/production-readiness/`: JUnit XML, Playwright JSON, live session/operation snapshots, transaction journals, receipts, SDK outputs, soak samples, dependency audits, and the wallet-monitor timeline. The committed report and evidence summary contain sanitized results. Local screenshots include public wallet identifiers and balances; no admin/API/private-key values are included in the report.
+
+Remediation artifacts are retained separately in ignored `data/remediation/`; the original evidence is preserved.
