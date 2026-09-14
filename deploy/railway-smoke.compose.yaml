@@ -1,0 +1,54 @@
+# Local reproduction of Railway's separate containers and root-owned volumes.
+# Supply generated, unfunded credentials through --env-file; never use a wallet
+# simultaneously managed by another installation.
+name: morpheus-railway-smoke
+services:
+  node:
+    image: bowtiedbluefin/morpheus-consumer-node:railway-20260914.1
+    user: "0:0"
+    environment:
+      ENVIRONMENT: production
+      ETH_NODE_ADDRESS: ${SMOKE_RPC_URL:?Supply an RPC URL}
+      ETH_NODE_CHAIN_ID: "8453"
+      WALLET_PRIVATE_KEY: ${SMOKE_WALLET_PRIVATE_KEY:?Use a disposable unfunded wallet}
+      NODE_PASSWORD: ${SMOKE_NODE_PASSWORD:?Generate a password}
+      HELPER_TOKEN: ${SMOKE_HELPER_TOKEN:?Generate a token}
+      HELPER_TRANSPORT: http
+      HELPER_HOST: "::"
+      HELPER_PORT: "8083"
+      WEB_ADDRESS: ":8082"
+      PROXY_ADDRESS: "127.0.0.1:3333"
+      IPFS_DISABLED: "true"
+      LOG_LEVEL_APP: warn
+      LOG_LEVEL_TCP: warn
+      LOG_LEVEL_ETH_RPC: warn
+    volumes:
+      - type: volume
+        source: node-data
+        target: /node-data
+        volume: {nocopy: true}
+    security_opt: ["no-new-privileges:true"]
+  gateway:
+    image: bowtiedbluefin/morpheus-consumer-gateway:railway-20260914.1
+    user: "0:0"
+    environment:
+      PORT: "8000"
+      PUBLIC_ORIGIN: http://localhost:8020
+      COOKIE_SECURE: "false"
+      ADMIN_TOKEN: ${SMOKE_ADMIN_TOKEN:?Generate an admin token}
+      NODE_URL: http://node:8082
+      NODE_PASSWORD: ${SMOKE_NODE_PASSWORD}
+      HELPER_URL: http://node:8083
+      HELPER_TOKEN: ${SMOKE_HELPER_TOKEN}
+      RPC_URL: ${SMOKE_RPC_URL}
+    ports: ["127.0.0.1:8020:8000"]
+    volumes:
+      - type: volume
+        source: gateway-data
+        target: /data
+        volume: {nocopy: true}
+    security_opt: ["no-new-privileges:true"]
+    depends_on: [node]
+volumes:
+  gateway-data:
+  node-data:

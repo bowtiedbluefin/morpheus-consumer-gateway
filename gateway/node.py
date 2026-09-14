@@ -1,6 +1,7 @@
 import asyncio
 import math
 import secrets
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -354,23 +355,51 @@ class Node:
 
 
 class Helper:
-    def __init__(self, socket):
-        self.configured = bool(socket)
+    def __init__(self, socket="", *, url="", token=""):
+        if socket and url:
+            raise RuntimeError("Configure only one of HELPER_SOCKET and HELPER_URL")
+        if url:
+            parsed = urlsplit(url)
+            if (
+                parsed.scheme not in ("http", "https")
+                or not parsed.hostname
+                or parsed.username is not None
+                or parsed.password is not None
+                or parsed.path not in ("", "/")
+                or parsed.query
+                or parsed.fragment
+            ):
+                raise RuntimeError("HELPER_URL must be an HTTP(S) origin without credentials or a path")
+            from .runtime import validate_helper_token
+
+            validate_helper_token(token)
+        self.configured = bool(socket or url)
         self.client = httpx.AsyncClient(
-            transport=httpx.AsyncHTTPTransport(uds=socket),
-            base_url="http://helper",
+            transport=httpx.AsyncHTTPTransport(uds=socket) if socket else None,
+            base_url=url.rstrip("/") if url else "http://helper",
+            headers={"Authorization": "Bearer " + token} if token else {},
             timeout=240,
             trust_env=False,
+            follow_redirects=False,
         )
 
     async def request(self, method, path, **kwargs):
         if not self.configured:
             raise GatewayError("helper_missing", "Node management helper is not connected")
         try:
-            res = await self.client.request(method, path, **kwargs)
-            if res.is_error:
-                raise GatewayError("helper_rejected", "Node operation failed; inspect the activity log")
-            return object_response(res.json())
+            async with self.client.stream(method, path, **kwargs) as res:
+                if res.status_code in (401, 403):
+                    raise GatewayError("helper_auth", "Node helper authentication failed; check HELPER_TOKEN")
+                if not 200 <= res.status_code < 300:
+                    raise GatewayError("helper_rejected", "Node operation failed; inspect the activity log")
+                body = bytearray()
+                async for chunk in res.aiter_bytes():
+                    if len(body) + len(chunk) > 2 * 1024 * 1024:
+                        raise GatewayError("helper_protocol", "Node helper response exceeded the size limit")
+                    body.extend(chunk)
+                import json
+
+                return object_response(json.loads(body))
         except (httpx.HTTPError, ValueError):
             raise GatewayError(
                 "helper_unreachable", "Cannot reach the local node management helper"

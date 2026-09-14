@@ -40,7 +40,7 @@ def create_app(cfg: Config | None = None, node=None, helper=None):
     cfg = cfg or Config.from_env()
     store = Store(cfg.data_dir)
     node = node or Node(cfg)
-    helper = helper or Helper(cfg.helper_socket)
+    helper = helper or Helper(cfg.helper_socket, url=cfg.helper_url, token=cfg.helper_token)
     sessions = Sessions(store, node, helper, cfg)
     key_active = defaultdict(int)
     rates = defaultdict(deque)
@@ -238,9 +238,17 @@ def create_app(cfg: Config | None = None, node=None, helper=None):
 
     @app.get("/readyz")
     async def readiness():
+        management_ready = True
+        if cfg.helper_url:
+            try:
+                state = await helper.request("GET", "/status", timeout=min(cfg.control_timeout, 3))
+                management_ready = state.get("ready") is True
+            except GatewayError:
+                management_ready = False
+        ready = sessions.ready and management_ready and not sessions.maintenance and not store.error
         return JSONResponse(
-            {"ready": sessions.ready and not sessions.maintenance and not store.error},
-            status_code=200 if sessions.ready and not sessions.maintenance and not store.error else 503,
+            {"ready": bool(ready)},
+            status_code=200 if ready else 503,
         )
 
     @app.get("/admin/api/status", dependencies=[Depends(admin)])
@@ -269,7 +277,9 @@ def create_app(cfg: Config | None = None, node=None, helper=None):
             "balances": balances,
             "held": held,
             "node_error": "; ".join(errors) or None,
-            "last_error": store.error or sessions.last_error,
+            "last_error": store.error
+            or sessions.last_error
+            or (results[3].message if cfg.helper_url and isinstance(results[3], GatewayError) else None),
             "active_requests": len(sessions.active),
             "queued": sessions.waiting,
             "maintenance": sessions.maintenance,

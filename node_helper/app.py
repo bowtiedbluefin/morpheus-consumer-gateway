@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import hmac
 import json
 import os
 import signal
@@ -7,7 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import Field
 
@@ -169,6 +170,13 @@ class Supervisor:
 
 
 def create_app(supervisor=None):
+    from gateway.runtime import validate_helper_token
+    from node_helper.run import transport
+
+    transport()  # Reject network mode without a valid credential before starting a child.
+    token = secret("HELPER_TOKEN")
+    if token:
+        validate_helper_token(token)
     if supervisor is None:
         directory = Path(os.getenv("NODE_DATA_DIR", "/node-data"))
         directory.mkdir(parents=True, exist_ok=True)
@@ -210,7 +218,7 @@ def create_app(supervisor=None):
             PROXY_STORE_CHAT_CONTEXT="false",
             PROXY_FORWARD_CHAT_CONTEXT="false",
         )
-        for name in ("PROVIDER_ALLOW_LIST", "RATING_CONFIG_CONTENT"):
+        for name in ("PROVIDER_ALLOW_LIST", "RATING_CONFIG_CONTENT", "HELPER_TOKEN", "HELPER_TOKEN_FILE"):
             env.pop(name, None)
         supervisor = Supervisor(directory, ["/usr/local/bin/proxy-router"], env, password=password)
 
@@ -234,6 +242,35 @@ def create_app(supervisor=None):
             await supervisor.stop()
 
     app = FastAPI(lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
+
+    @app.middleware("http")
+    async def boundary(request: Request, call_next):
+        if request.url.path != "/healthz" or request.method != "GET":
+            if token and not hmac.compare_digest(
+                request.headers.get("authorization", "").encode(), ("Bearer " + token).encode()
+            ):
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
+            if request.headers.get("origin"):
+                return JSONResponse({"error": "browser_access_denied"}, status_code=403)
+            body = bytearray()
+            try:
+                async with asyncio.timeout(15):
+                    async for chunk in request.stream():
+                        if len(body) + len(chunk) > 128 * 1024:
+                            return JSONResponse({"error": "request_too_large"}, status_code=413)
+                        body.extend(chunk)
+            except TimeoutError:
+                return JSONResponse({"error": "request_timeout"}, status_code=408)
+            request._body = bytes(body)
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    @app.get("/healthz")
+    async def health():
+        running = supervisor.process is not None and supervisor.process.returncode is None
+        return JSONResponse({"running": running}, status_code=200 if running else 503)
 
     @app.get("/status")
     async def status():

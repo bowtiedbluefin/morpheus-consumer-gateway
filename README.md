@@ -25,6 +25,10 @@ See [recovery behavior and audit fixes](docs/RECOVERY-AND-AUDIT-FIXES.md) for de
 
 “Keep available” maintains an open marketplace session when capacity, funds, and providers permit. It does not reserve GPU memory, extend an existing on-chain session, or guarantee uninterrupted availability. Opening a session escrows MOR; it is not the same as buying tokens from a centralized API.
 
+## Run on Railway
+
+See [railway_setup.md](railway_setup.md) for the two-service setup, private management authentication, credential references, persistent volumes and end-to-end walkthrough. The guide records image publication status and what has actually been verified.
+
 ## Run on a Linux VM
 
 Use a VM with Docker Engine and the Compose plugin, outbound access to your RPC and providers, a consumer wallet, MOR for session escrow, and native gas funds on the selected network. No GPU is needed on the consumer VM. Use one dedicated consumer node/wallet for this installation.

@@ -16,6 +16,8 @@ class Config:
     node_username: str = "admin"
     node_password: str = ""
     helper_socket: str = ""
+    helper_url: str = ""
+    helper_token: str = ""
     public_origin: str = "http://localhost:8000"
     secure_cookie: bool = True
     static_dir: Path = Path("web/dist")
@@ -45,6 +47,8 @@ class Config:
             node_username=os.getenv("NODE_USERNAME", "admin"),
             node_password=secret("NODE_PASSWORD"),
             helper_socket=os.getenv("HELPER_SOCKET", ""),
+            helper_url=os.getenv("HELPER_URL", ""),
+            helper_token=secret("HELPER_TOKEN"),
             public_origin=os.getenv("PUBLIC_ORIGIN", "http://localhost:8000").rstrip("/"),
             secure_cookie=os.getenv("COOKIE_SECURE", "true").lower() == "true",
             static_dir=Path(os.getenv("STATIC_DIR", "web/dist")),
