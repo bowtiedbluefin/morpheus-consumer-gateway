@@ -100,7 +100,9 @@ def test_packaged_node_has_network_defaults_and_existing_storage(tmp_path, monke
         monkeypatch.delenv(name, raising=False)
     helper_module.create_app()
     assert (tmp_path / "storage").is_dir()
-    assert captured["BLOCKSCOUT_API_URL"].endswith("/api")
+    # The pinned node uses BlockscoutApiV2Client, which appends /addresses/...
+    network_host = "base" if chain == "8453" else "base-sepolia"
+    assert captured["BLOCKSCOUT_API_URL"] == f"https://{network_host}.blockscout.com/api/v2"
     assert ("sepolia" in captured["BLOCKSCOUT_API_URL"]) == (chain == "84532")
     assert len(captured["DIAMOND_CONTRACT_ADDRESS"]) == 42
     assert len(captured["MOR_TOKEN_ADDRESS"]) == 42

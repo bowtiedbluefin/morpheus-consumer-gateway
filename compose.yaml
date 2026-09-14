@@ -49,6 +49,9 @@ services:
       ENVIRONMENT: production
       ETH_NODE_ADDRESS: ${ETH_NODE_ADDRESS:?Set your RPC URL in .env}
       ETH_NODE_CHAIN_ID: ${ETH_NODE_CHAIN_ID:-8453}
+      DIAMOND_CONTRACT_ADDRESS: ${DIAMOND_CONTRACT_ADDRESS:-}
+      MOR_TOKEN_ADDRESS: ${MOR_TOKEN_ADDRESS:-}
+      BLOCKSCOUT_API_URL: ${BLOCKSCOUT_API_URL:-}
       WALLET_PRIVATE_KEY_FILE: /run/secrets/wallet_key
       NODE_PASSWORD_FILE: /run/secrets/node_password
       WEB_ADDRESS: 0.0.0.0:8082

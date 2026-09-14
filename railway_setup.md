@@ -66,6 +66,9 @@ Open **node → Variables → Raw Editor**. Paste this, replacing the four crede
 ENVIRONMENT=production
 ETH_NODE_ADDRESS=https://YOUR-BASE-RPC-ENDPOINT
 ETH_NODE_CHAIN_ID=8453
+DIAMOND_CONTRACT_ADDRESS=0x6aBE1d282f72B474E54527D93b979A4f64d3030a
+MOR_TOKEN_ADDRESS=0x7431aDa8a591C955a994a21710752EF9b882b8e3
+BLOCKSCOUT_API_URL=https://base.blockscout.com/api/v2
 WALLET_PRIVATE_KEY=YOUR-DEDICATED-WALLET-PRIVATE-KEY
 NODE_PASSWORD=YOUR-RANDOM-NODE-PASSWORD
 HELPER_TOKEN=YOUR-SEPARATE-RANDOM-HELPER-TOKEN
@@ -85,6 +88,12 @@ RAILWAY_DEPLOYMENT_DRAINING_SECONDS=180
 RAILWAY_DEPLOYMENT_OVERLAP_SECONDS=0
 RAILWAY_HEALTHCHECK_TIMEOUT_SEC=300
 ```
+
+Railway Variables become the container's environment; you do not upload a `.env` file. The block above explicitly identifies Base mainnet, its marketplace contract, MOR token and explorer. Keep these values together with a matching Base RPC. [Official network addresses](https://nodedocs.mor.org/get-started/networks-and-tokens)
+
+The helper supplies network defaults when the contract/explorer variables are absent. Release `railway-20260914.1` had an incorrect `/api` explorer default; explicitly setting `BLOCKSCOUT_API_URL=https://base.blockscout.com/api/v2` fixes that release without rebuilding. The native node's transaction-history client requires `/api/v2`.
+
+The helper also generates native authentication from `NODE_PASSWORD`, writes the rating configuration, and sets cookie, authentication, storage and recovery-journal paths under `/node-data`. It disables stored/forwarded chat context because API clients supply message history. Do not copy the upstream example's `admin:admin` credentials, Docker socket settings or demo local-model configuration into this deployment. Other optional native settings retain the pinned node's defaults unless supplied as Railway Variables.
 
 `WEB_ADDRESS=:8082` is deliberate: the pinned native validator rejects a literal bracketed IPv6 host. An empty host binds all interfaces; both IPv4 and IPv6 were verified against the built image.
 

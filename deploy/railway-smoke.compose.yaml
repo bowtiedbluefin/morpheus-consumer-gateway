@@ -10,6 +10,9 @@ services:
       ENVIRONMENT: production
       ETH_NODE_ADDRESS: ${SMOKE_RPC_URL:?Supply an RPC URL}
       ETH_NODE_CHAIN_ID: "8453"
+      DIAMOND_CONTRACT_ADDRESS: "0x6aBE1d282f72B474E54527D93b979A4f64d3030a"
+      MOR_TOKEN_ADDRESS: "0x7431aDa8a591C955a994a21710752EF9b882b8e3"
+      BLOCKSCOUT_API_URL: "https://base.blockscout.com/api/v2"
       WALLET_PRIVATE_KEY: ${SMOKE_WALLET_PRIVATE_KEY:?Use a disposable unfunded wallet}
       NODE_PASSWORD: ${SMOKE_NODE_PASSWORD:?Generate a password}
       HELPER_TOKEN: ${SMOKE_HELPER_TOKEN:?Generate a token}
